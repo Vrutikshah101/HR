@@ -1,0 +1,191 @@
+Leave Management System - Activity Journey (Completed So Far)
+Date: 2026-03-23
+
+Phase -1: Planning and Documentation
+Major Task: Documentation Baseline Creation
+- Activity: Created `/docs` folder structure for mandatory project artifacts.
+- Activity: Drafted `requirements.md` with requirement IDs (REQ-001 onward).
+- Activity: Drafted functional and non-functional scope boundaries.
+- Activity: Added requirement-to-API/DB/UI/Test traceability matrix.
+- Activity: Drafted `domain-model.md` from implemented entities only.
+- Activity: Drafted `schema.sql` aligned to domain and migration intent.
+- Activity: Drafted `api-contract.md` for available endpoints and contracts.
+- Activity: Drafted `workflow.md` for leave lifecycle and approval levels.
+- Activity: Drafted `access-matrix.md` for role permissions.
+- Activity: Drafted `assumptions.md` with Confirmed/Assumption/Open Question tags.
+- Activity: Drafted `decision-log.md` with dated engineering decisions.
+- Activity: Drafted `test-plan.md` with phase-wise validation goals.
+- Activity: Drafted `phase-plan.md` with signoff template and status tracking.
+
+Major Task: Anti-Hallucination Compliance
+- Activity: Mapped docs to actual code entities/controllers before writing.
+- Activity: Avoided undefined tables/columns/workflows in deliverables.
+- Activity: Explicitly logged unresolved policy items as open questions.
+
+Phase 0: Docker and Environment Setup
+Major Task: Container Topology Setup
+- Activity: Created root `docker-compose.yml` with `mysql`, `backend`, `frontend` services.
+- Activity: Added MySQL healthcheck and named volume persistence.
+- Activity: Configured backend service dependency on healthy MySQL.
+- Activity: Configured frontend service dependency on backend service.
+
+Major Task: Backend Containerization
+- Activity: Added `backend/Dockerfile` multi-stage build (restore/publish/runtime).
+- Activity: Set backend runtime port mapping for API host exposure.
+- Activity: Added `backend/.dockerignore` for faster build context.
+
+Major Task: Frontend Containerization
+- Activity: Added `frontend/Dockerfile` for Vite dev serving in container.
+- Activity: Exposed Vite host/port for browser access.
+- Activity: Added `frontend/.dockerignore` for lean image context.
+
+Major Task: Environment Configuration
+- Activity: Wired `ConnectionStrings__DefaultConnection` in compose env.
+- Activity: Wired `VITE_API_BASE_URL` for frontend API target.
+
+Phase 1: UI/UX (Static, No Backend Logic)
+Major Task: Route and Navigation Foundation
+- Activity: Added role model and menu map in `frontend/src/app/roles.js`.
+- Activity: Refactored routes to include role gate checks and redirects.
+- Activity: Implemented persisted role preview mode via localStorage.
+
+Major Task: Reusable UI Components
+- Activity: Added `AppShell` layout with top header + left nav.
+- Activity: Added reusable `PageTitle` component.
+- Activity: Added reusable `StatGrid` component.
+- Activity: Added unauthorized view for role-restricted pages.
+
+Major Task: Feature Page Scaffolding
+- Activity: Upgraded `LoginPage` into mocked but complete form flow.
+- Activity: Added static Employee/HR/Admin dashboard content blocks.
+- Activity: Added static Leaves apply form + history grid.
+- Activity: Added static Approvals queue + action controls.
+- Activity: Added static Leave Balance report filters + export actions.
+
+Major Task: Contemporary Redesign (Requested Improvement)
+- Activity: Reworked color system (teal/orange neutral-balanced palette).
+- Activity: Introduced expressive typography and stronger visual hierarchy.
+- Activity: Rebuilt panels/cards with depth, gradients, and chip patterns.
+- Activity: Added slider controls in dashboard/leaves/approvals/report areas.
+- Activity: Added horizontal slider cards with scroll-snap behavior.
+- Activity: Added responsive behavior for tablet/mobile breakpoints.
+- Activity: Added subtle entry/hover animations for interaction polish.
+
+Major Task: Frontend Runtime Workaround
+- Activity: Addressed Windows policy + native rollup issues.
+- Activity: Switched scripts to WASM-friendly rollup mode in `package.json`.
+
+Phase 2: DB Schema + Backend Foundation
+Major Task: EF Core Foundation
+- Activity: Added EF Core and Pomelo MySQL packages in infrastructure project.
+- Activity: Added configuration binder/environment/json package support.
+- Activity: Implemented `ApplicationDbContext` with all required DbSets.
+
+Major Task: Entity Mapping Layer
+- Activity: Added `UserConfiguration` mapping and unique email index.
+- Activity: Added `UserRoleAssignmentConfiguration` composite key mapping.
+- Activity: Added `EmployeeConfiguration` with unique user/code constraints.
+- Activity: Added `ReportingHierarchyConfiguration` with FK restrictions.
+- Activity: Added `LeaveRequestConfiguration` with enum conversion + precision.
+- Activity: Added `LeaveRequestApprovalConfiguration` with FK and length rules.
+- Activity: Added `LeaveBalanceConfiguration` with unique employee/type index.
+
+Major Task: Infrastructure Registration
+- Activity: Added `AddInfrastructure` extension for DI wiring.
+- Activity: Added design-time DbContext factory for migration commands.
+- Activity: Updated API `Program.cs` to use infrastructure registration.
+- Activity: Added default MySQL connection string in `appsettings.json`.
+
+Major Task: Migration Tooling and Execution
+- Activity: Created local tool manifest (`dotnet-tools.json`).
+- Activity: Installed local `dotnet-ef` tool.
+- Activity: Generated initial migration (`InitialCreate`) + snapshot.
+- Activity: Fixed build/migration blockers (package version alignment).
+
+Major Task: Validation
+- Activity: Executed `dotnet build backend/LeaveManagement.sln` successfully.
+
+Phase 3: Auth + Users + Hierarchy
+Major Task: Authentication Core
+- Activity: Added JWT options model (`JwtOptions`).
+- Activity: Replaced placeholder token service with signed JWT creation.
+- Activity: Added PBKDF2 password hasher service.
+- Activity: Implemented `AuthService` with DB credential verification.
+- Activity: Updated `AuthController` login to async DB-backed logic.
+
+Major Task: API AuthZ Pipeline
+- Activity: Added JWT bearer package to API project.
+- Activity: Configured authentication + token validation in `Program.cs`.
+- Activity: Added authorization middleware ordering (`UseAuthentication` then `UseAuthorization`).
+- Activity: Added `HttpContextCurrentUserService` implementation.
+
+Major Task: Users Management
+- Activity: Added application contracts (`CreateUserCommand`, `UserSummary`, result models).
+- Activity: Added `IUserManagementService` abstraction.
+- Activity: Implemented `UserManagementService` with duplicate checks and role parsing.
+- Activity: Added `/api/users` controller endpoints:
+  - `POST /api/users` (create user + employee)
+  - `GET /api/users` (list user summaries)
+- Activity: Applied `Authorize(Roles = "Admin,Hr")` to users controller.
+
+Major Task: Hierarchy Management
+- Activity: Added hierarchy contracts (`UpsertHierarchyCommand`, `HierarchyDto`).
+- Activity: Added `IHierarchyService` abstraction.
+- Activity: Implemented `HierarchyService` with upsert + validation rules.
+- Activity: Added `/api/hierarchy` controller endpoints:
+  - `PUT /api/hierarchy`
+  - `GET /api/hierarchy/{employeeId}`
+- Activity: Applied `Authorize(Roles = "Admin,Hr")` to hierarchy controller.
+
+Major Task: Development Startup and Seed
+- Activity: Added migration execution at API startup.
+- Activity: Added `DevelopmentDataSeeder` service.
+- Activity: Seeded baseline dev users:
+  - admin@leave.local
+  - hr@leave.local
+  - manager@leave.local
+  - employee@leave.local
+- Activity: Seeded sample reporting hierarchy for employee-manager relation.
+
+Major Task: Controller Authorization Pass
+- Activity: Applied `[Authorize]` to leaves controller baseline.
+- Activity: Applied role restrictions to dashboard endpoints.
+- Activity: Applied role restrictions to reports controller.
+
+Major Task: Documentation Sync (Phase 3)
+- Activity: Updated `docs/api-contract.md` for new users/hierarchy/auth contracts.
+- Activity: Updated `docs/workflow.md` for auth/access section.
+- Activity: Updated `docs/access-matrix.md` for new management permissions.
+- Activity: Updated `docs/requirements.md` with REQ-011/REQ-012/REQ-013.
+- Activity: Updated `docs/test-plan.md` with Phase 3 verification scenarios.
+- Activity: Updated `docs/decision-log.md` and `docs/assumptions.md`.
+- Activity: Updated `docs/phase-plan.md` with Phase 3 signoff status.
+
+Operational Notes
+- Activity: Resolved multiple build/migration errors during implementation.
+- Activity: Provided non-Docker local run path due missing Docker binary.
+- Activity: Provided MySQL Workbench SQL setup for local DB/user provisioning.
+
+Current Status
+- Completed through Phase 3 (Passed with notes).
+- Next phase target: Phase 4 (Leave Apply - DB-backed workflow implementation).
+
+Phase 5: Approval Workflow
+Major Task: Core Approval Engine
+- Activity: Introduced dedicated workflow abstraction for approve/reject actions.
+- Activity: Implemented `LeaveWorkflowService` with level-based transition rules.
+- Activity: Validated actor approver identity against reporting hierarchy level.
+- Activity: Enforced action only for pending requests.
+- Activity: Enforced mandatory reject comment.
+
+Major Task: Audit Trail
+- Activity: Persisted approval/rejection actions in `leave_request_approvals` table.
+- Activity: Captured action level, approver employee, comment, and action timestamp.
+
+Major Task: API Integration
+- Activity: Wired `/api/leaves/{id}/approve` and `/api/leaves/{id}/reject` to workflow service.
+- Activity: Added clear validation error responses on invalid transitions or approver mismatch.
+
+Major Task: Validation and Documentation
+- Activity: Verified backend compilation after workflow implementation.
+- Activity: Updated API contract, workflow, test plan, and phase plan for Phase 5 signoff.
