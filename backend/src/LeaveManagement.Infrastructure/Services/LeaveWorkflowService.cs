@@ -1,18 +1,30 @@
+using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Application.Leaves;
 using LeaveManagement.Domain.Entities;
 using LeaveManagement.Domain.Enums;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LeaveManagement.Infrastructure.Services;
 
 public class LeaveWorkflowService : ILeaveWorkflowService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ILeaveBalanceService _leaveBalanceService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<LeaveWorkflowService> _logger;
 
-    public LeaveWorkflowService(ApplicationDbContext dbContext)
+    public LeaveWorkflowService(
+        ApplicationDbContext dbContext,
+        ILeaveBalanceService leaveBalanceService,
+        INotificationService notificationService,
+        ILogger<LeaveWorkflowService> logger)
     {
         _dbContext = dbContext;
+        _leaveBalanceService = leaveBalanceService;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public Task<LeaveRequest> ApproveAsync(Guid actorUserId, Guid requestId, string? comment, CancellationToken cancellationToken)
@@ -90,11 +102,15 @@ public class LeaveWorkflowService : ILeaveWorkflowService
             throw new InvalidOperationException($"Current user is not authorized for approval level {approvalLevel}.");
         }
 
+        var finalApprovalReached = false;
+
         if (action == "Approved")
         {
             request.Status = request.Status == LeaveRequestStatus.PendingLevel1 && hierarchy.Level2ApproverEmployeeId.HasValue
                 ? LeaveRequestStatus.PendingLevel2
                 : LeaveRequestStatus.Approved;
+
+            finalApprovalReached = request.Status == LeaveRequestStatus.Approved;
         }
         else
         {
@@ -114,6 +130,20 @@ public class LeaveWorkflowService : ILeaveWorkflowService
 
         await _dbContext.LeaveRequestApprovals.AddAsync(audit, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (finalApprovalReached)
+        {
+            await _leaveBalanceService.ApplyApprovedDeductionAsync(request, cancellationToken);
+        }
+
+        _logger.LogInformation(
+            "Leave action completed. RequestId={RequestId} Action={Action} Level={ApprovalLevel} NewStatus={Status}",
+            request.Id,
+            action,
+            approvalLevel,
+            request.Status);
+
+        await _notificationService.NotifyLeaveActionedAsync(request.Id, request.EmployeeId, action, approvalLevel, cancellationToken);
 
         return request;
     }

@@ -1,45 +1,35 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { menuItems, roleOptions } from "../app/roles";
+import { getMenuItems, mapPrimaryRole } from "../app/roles";
 
 const roleTag = {
-  employee: "Employee View",
-  approver: "Approver View",
-  hr: "HR Operations",
-  admin: "Admin Control"
+  user: "Employee",
+  hr: "HR",
+  admin: "Admin"
 };
 
-export function AppShell({ role, onRoleChange }) {
-  const allowedMenu = menuItems.filter((item) => item.roles.includes(role));
+export function AppShell({ roles, onLogout }) {
+  const primaryRole = mapPrimaryRole(roles);
+  const menuItems = getMenuItems(roles);
 
   return (
     <div className="shell">
       <header className="shell-header">
         <div className="header-left">
           <p className="eyebrow">Leave Management System</p>
-          <h1>Modern Workspace Preview</h1>
+          <h1>Workspace</h1>
           <div className="header-chips">
-            <span className="chip">Phase 1 Static UI</span>
-            <span className="chip chip-soft">No Backend Logic</span>
-            <span className="chip chip-highlight">{roleTag[role]}</span>
+            <span className="chip chip-highlight">{roleTag[primaryRole]} Access</span>
+            <span className="chip">Live API Mode</span>
           </div>
         </div>
 
-        <label className="role-picker">
-          Active Role
-          <select value={role} onChange={(event) => onRoleChange(event.target.value)}>
-            {roleOptions.map((roleOption) => (
-              <option key={roleOption.value} value={roleOption.value}>
-                {roleOption.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <button type="button" className="secondary" onClick={onLogout}>Logout</button>
       </header>
 
       <div className="shell-content">
         <aside className="shell-nav">
           <p className="nav-title">Navigation</p>
-          {allowedMenu.map((item) => (
+          {menuItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -48,7 +38,6 @@ export function AppShell({ role, onRoleChange }) {
               {item.label}
             </NavLink>
           ))}
-          <div className="nav-note">Role-based menus are mocked for Phase 1 usability validation.</div>
         </aside>
 
         <section className="shell-main">

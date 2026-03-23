@@ -4,6 +4,7 @@ using LeaveManagement.Domain.Entities;
 using LeaveManagement.Domain.Enums;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace LeaveManagement.Infrastructure.Services;
@@ -19,11 +20,22 @@ public class LeaveRequestService : ILeaveRequestService
 
     private readonly ApplicationDbContext _dbContext;
     private readonly LeaveOptions _leaveOptions;
+    private readonly ILeaveBalanceService _leaveBalanceService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<LeaveRequestService> _logger;
 
-    public LeaveRequestService(ApplicationDbContext dbContext, IOptions<LeaveOptions> leaveOptions)
+    public LeaveRequestService(
+        ApplicationDbContext dbContext,
+        IOptions<LeaveOptions> leaveOptions,
+        ILeaveBalanceService leaveBalanceService,
+        INotificationService notificationService,
+        ILogger<LeaveRequestService> logger)
     {
         _dbContext = dbContext;
         _leaveOptions = leaveOptions.Value;
+        _leaveBalanceService = leaveBalanceService;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public Task<IReadOnlyCollection<LeaveTypeDto>> GetLeaveTypesAsync(CancellationToken cancellationToken)
@@ -48,6 +60,19 @@ public class LeaveRequestService : ILeaveRequestService
         {
             throw new InvalidOperationException("Invalid leave type code.");
         }
+
+        var workingDays = _leaveBalanceService.CalculateWorkingDays(command.StartDate, command.EndDate);
+        if (workingDays <= 0)
+        {
+            throw new InvalidOperationException("Selected date range does not contain any working day.");
+        }
+
+        if (command.Days > workingDays)
+        {
+            throw new InvalidOperationException("Days cannot exceed working days for selected period after weekends/holidays.");
+        }
+
+        await _leaveBalanceService.ValidateSufficientBalanceAsync(employeeId, command.LeaveTypeCode, command.Days, cancellationToken);
 
         var hasOverlap = await _dbContext.LeaveRequests.AnyAsync(x =>
             x.EmployeeId == employeeId
@@ -89,6 +114,10 @@ public class LeaveRequestService : ILeaveRequestService
 
         await _dbContext.LeaveRequests.AddAsync(request, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Leave applied. RequestId={RequestId} EmployeeId={EmployeeId} Days={Days}", request.Id, request.EmployeeId, request.Days);
+        await _notificationService.NotifyLeaveAppliedAsync(request.Id, request.EmployeeId, hierarchy.Level1ApproverEmployeeId, hierarchy.Level2ApproverEmployeeId, cancellationToken);
+
         return request;
     }
 
@@ -180,15 +209,26 @@ public class LeaveRequestService : ILeaveRequestService
             throw new InvalidOperationException("Leave request not found.");
         }
 
-        if (request.Status is not LeaveRequestStatus.PendingLevel1 and not LeaveRequestStatus.PendingLevel2)
+        if (request.Status is LeaveRequestStatus.PendingLevel1 or LeaveRequestStatus.PendingLevel2)
         {
-            throw new InvalidOperationException("Only pending leave requests can be cancelled.");
+            request.Status = LeaveRequestStatus.Cancelled;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Leave cancelled at pending stage. RequestId={RequestId}", request.Id);
+            await _notificationService.NotifyLeaveCancelledAsync(request.Id, request.EmployeeId, cancellationToken);
+            return request;
         }
 
-        request.Status = LeaveRequestStatus.Cancelled;
+        if (request.Status == LeaveRequestStatus.Approved)
+        {
+            request.Status = LeaveRequestStatus.Cancelled;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _leaveBalanceService.RestoreForCancellationAsync(request, cancellationToken);
+            _logger.LogInformation("Approved leave cancelled and balance restored. RequestId={RequestId}", request.Id);
+            await _notificationService.NotifyLeaveCancelledAsync(request.Id, request.EmployeeId, cancellationToken);
+            return request;
+        }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return request;
+        throw new InvalidOperationException("Only pending or approved leave requests can be cancelled.");
     }
 
     private async Task<Guid> ResolveEmployeeIdAsync(Guid userId, CancellationToken cancellationToken)
@@ -235,4 +275,3 @@ public class LeaveRequestService : ILeaveRequestService
         }
     }
 }
-

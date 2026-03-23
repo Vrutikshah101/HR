@@ -1,29 +1,38 @@
 # Phase Plan and Signoff (Current Progress)
 
-## Phase -1 to Phase 4
-- Completed as previously signed off.
+## Phase -1 through Phase 8
+- Completed and tracked in prior updates.
 
-## Phase 5: Approval Workflow (Core)
+## Phase 9: Notifications + Hardening
 - Scope completed:
-  - Implemented approval/rejection workflow service (`ILeaveWorkflowService`).
-  - Enforced correct approver + correct pending level validation.
-  - Implemented Level1 -> Level2/Approved transition logic.
-  - Implemented rejection flow with mandatory comment.
-  - Added audit trail persistence in `leave_request_approvals`.
-  - Wired `/api/leaves/{id}/approve` and `/api/leaves/{id}/reject` to service layer.
+  - Added notification abstraction and logging-based notification implementation.
+  - Triggered notifications on leave apply/action/cancel paths.
+  - Added global exception middleware for consistent problem details response.
+  - Added global and auth-specific rate limiting policies.
+  - Added basic security response headers.
+  - Tightened user password policy for user creation.
 - Tests written:
-  - Scenario list captured in `docs/test-plan.md`.
+  - Manual scenario coverage in `docs/test-plan.md`
 - Tests passed:
-  - `dotnet build backend/LeaveManagement.sln` succeeded.
-- Defects:
-  - None at compile level.
-- Risks:
-  - Balance impact of approved/rejected/cancelled flow remains Phase 6.
+  - Build + regression checks passed
 - Status: Passed with notes
 
-## Next Phase Entry Gate
-- Target next phase: Phase 6 (Leave Balance + Holidays)
-- Preconditions:
-  - Implement leave balance deduction on approval
-  - Implement balance restore on cancellation rules
-  - Define holiday schema/policy and integrate into day calculations
+## Phase 10: QA & Release
+- Scope completed:
+  - Added backend automated test project (`LeaveManagement.Tests`).
+  - Added initial unit tests and integrated test project into solution.
+  - Executed `dotnet build` and `dotnet test` successfully.
+  - Updated docs/journey to reflect release readiness state.
+- Tests written:
+  - 3 unit tests
+- Tests passed:
+  - 3/3 passed
+- Defects:
+  - None observed in automated checks
+- Risks:
+  - Notification implementation is currently log-based (not external channel delivery)
+- Status: Passed with notes
+
+## Overall Status
+- Phases -1 through 10 implemented in current scope baseline.
+- Ready for user acceptance validation.

@@ -1,69 +1,60 @@
-# API Contract (Current Scaffold + Phase 5)
+# API Contract (Current Scaffold + Phase 8)
 
 ## Auth
-
-### POST `/api/auth/login`
-- Confirmed request: `email`, `password`.
-- Confirmed response: `accessToken`, `refreshToken`.
-- Confirmed behavior: validates user existence, active status, and password hash.
+- `POST /api/auth/login`
 
 ## Users
-
-### POST `/api/users`
-### GET `/api/users`
-- Authorization: `Admin` or `Hr` role required.
+- `POST /api/users`
+- `GET /api/users`
 
 ## Hierarchy
-
-### PUT `/api/hierarchy`
-### GET `/api/hierarchy/{employeeId}`
-- Authorization: `Admin` or `Hr` role required.
+- `PUT /api/hierarchy`
+- `GET /api/hierarchy/{employeeId}`
 
 ## Leaves
+- `GET /api/leaves/types`
+- `GET /api/leaves/holidays`
+- `GET /api/leaves/my-balances`
+- `POST /api/leaves`
+- `GET /api/leaves/my`
+- `GET /api/leaves/team-pending`
+- `GET /api/leaves/{id}`
+- `POST /api/leaves/{id}/approve`
+- `POST /api/leaves/{id}/reject`
+- `POST /api/leaves/{id}/cancel`
 
-### GET `/api/leaves/types`
-- Authorization: authenticated users.
-- Response: list of leave type code/name values from `Leave:Types` config.
+### Leave Behavior Notes
+- Apply validates type/date/reason/days and prevents overlap.
+- Working-day validation excludes weekends and configured holidays.
+- Sufficient leave balance is required at apply time.
+- Final approval deducts leave balance.
+- Cancelling approved leave restores deducted balance.
+- Approve/reject writes audit records in `leave_request_approvals`.
 
-### POST `/api/leaves`
-- Authorization: authenticated users.
-- DB-backed create with validation + overlap checks.
+## Dashboard (DB-driven)
+- `GET /api/dashboard/employee`
+- `GET /api/dashboard/manager`
+- `GET /api/dashboard/hr`
+- `GET /api/dashboard/admin`
 
-### GET `/api/leaves/my`
-- Authorization: authenticated users.
-- Returns own persisted leave history.
+### Dashboard Metric Sources (Current)
+- Employee: `leave_balances`, `leave_requests`
+- Manager: `reporting_hierarchies`, `leave_requests`
+- HR: `leave_requests`
+- Admin: `users`, `employees`, `leave_request_approvals`
 
-### GET `/api/leaves/team-pending`
-- Authorization: authenticated users.
-- Returns pending requests for configured Level1/Level2 approver scope.
+## Reports (MIS)
+- `GET /api/reports/leave-balance`
+- `GET /api/reports/department-summary`
+- `GET /api/reports/monthly-utilization`
+- `GET /api/reports/approval-summary`
 
-### GET `/api/leaves/{id}`
-- Authorization: owner, configured approver, or `Admin/Hr`.
+### Report Filters
+- Leave balance: `department`, `leaveTypeCode`, `format`
+- Department summary: `dateFrom`, `dateTo`, `format`
+- Monthly utilization: `year`, `format`
+- Approval summary: `dateFrom`, `dateTo`, `format`
 
-### POST `/api/leaves/{id}/approve`
-- Authorization: authenticated users.
-- Workflow rules:
-  - request must be in pending status
-  - current user must match configured approver for current level
-  - `PendingLevel1` approval moves to `PendingLevel2` when Level2 exists, else `Approved`
-  - `PendingLevel2` approval moves to `Approved`
-- Side effect: inserts audit row in `leave_request_approvals`.
-
-### POST `/api/leaves/{id}/reject`
-- Authorization: authenticated users.
-- Workflow rules:
-  - request must be in pending status
-  - current user must match configured approver for current level
-  - reject comment is mandatory
-  - status moves to `Rejected`
-- Side effect: inserts audit row in `leave_request_approvals`.
-
-### POST `/api/leaves/{id}/cancel`
-- Authorization: authenticated users.
-- Only own pending requests can be cancelled.
-
-## Dashboard
-- Authorization remains role-scoped (`User/Hr/Admin` as configured).
-
-## Reports
-- Authorization remains `Hr/Admin`.
+### Export
+- `format=csv` returns downloadable CSV file.
+- Default response is JSON rows.

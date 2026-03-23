@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { UnauthorizedPage } from "../components/UnauthorizedPage";
-import { defaultRouteByRole, menuItems } from "../app/roles";
 import { LoginPage } from "../features/auth/pages/LoginPage";
 import { EmployeeLeavePage } from "../features/leaves/pages/EmployeeLeavePage";
 import { ApprovalsPage } from "../features/approvals/pages/ApprovalsPage";
@@ -9,90 +9,101 @@ import { EmployeeDashboardPage } from "../features/dashboard/pages/EmployeeDashb
 import { HrDashboardPage } from "../features/dashboard/pages/HrDashboardPage";
 import { AdminDashboardPage } from "../features/dashboard/pages/AdminDashboardPage";
 import { LeaveBalanceReportPage } from "../features/reports/pages/LeaveBalanceReportPage";
-import { useEffect, useMemo, useState } from "react";
+import { clearToken, getToken } from "../services/tokenStorage";
+import { getRolesFromToken, hasRole } from "../services/jwt";
+import { defaultRouteByRole, mapPrimaryRole } from "../app/roles";
 
-function RoleGate({ role, allowedRoles, children }) {
-  if (!allowedRoles.includes(role)) {
-    return <UnauthorizedPage role={role} />;
+function ProtectedRoute({ token, children }) {
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
+function RoleRoute({ roles, allow, children }) {
+  const ok = allow.some((role) => hasRole(roles, role));
+  if (!ok) {
+    return <UnauthorizedPage role={mapPrimaryRole(roles)} />;
   }
 
   return children;
 }
 
 export function AppRoutes() {
-  const [role, setRole] = useState(() => localStorage.getItem("phase1-role") ?? "employee");
+  const [token, setToken] = useState(() => getToken());
+  const [roles, setRoles] = useState(() => getRolesFromToken(getToken()));
 
-  useEffect(() => {
-    localStorage.setItem("phase1-role", role);
-  }, [role]);
+  const rootRedirect = useMemo(() => defaultRouteByRole(mapPrimaryRole(roles)), [roles]);
 
-  const rootRedirect = useMemo(() => defaultRouteByRole[role] ?? "/dashboard/employee", [role]);
+  function handleLoginSuccess(newRoles) {
+    setToken(getToken());
+    setRoles(newRoles);
+  }
 
-  const allowed = useMemo(() => {
-    return {
-      employeeDashboard: menuItems.find((item) => item.to === "/dashboard/employee")?.roles ?? [],
-      hrDashboard: menuItems.find((item) => item.to === "/dashboard/hr")?.roles ?? [],
-      adminDashboard: menuItems.find((item) => item.to === "/dashboard/admin")?.roles ?? [],
-      leaves: menuItems.find((item) => item.to === "/leaves")?.roles ?? [],
-      approvals: menuItems.find((item) => item.to === "/approvals")?.roles ?? [],
-      report: menuItems.find((item) => item.to === "/reports/leave-balance")?.roles ?? []
-    };
-  }, []);
+  function handleLogout() {
+    clearToken();
+    setToken(null);
+    setRoles([]);
+  }
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage role={role} onRoleChange={setRole} />} />
-      <Route path="/" element={<AppShell role={role} onRoleChange={setRole} />}>
+      <Route
+        path="/login"
+        element={token ? <Navigate to={rootRedirect} replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} />}
+      />
+
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute token={token}>
+            <AppShell roles={roles} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to={rootRedirect} replace />} />
+
         <Route
           path="dashboard/employee"
           element={
-            <RoleGate role={role} allowedRoles={allowed.employeeDashboard}>
+            <RoleRoute roles={roles} allow={["User", "Hr", "Admin"]}>
               <EmployeeDashboardPage />
-            </RoleGate>
+            </RoleRoute>
           }
         />
+
         <Route
           path="dashboard/hr"
           element={
-            <RoleGate role={role} allowedRoles={allowed.hrDashboard}>
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
               <HrDashboardPage />
-            </RoleGate>
+            </RoleRoute>
           }
         />
+
         <Route
           path="dashboard/admin"
           element={
-            <RoleGate role={role} allowedRoles={allowed.adminDashboard}>
+            <RoleRoute roles={roles} allow={["Admin"]}>
               <AdminDashboardPage />
-            </RoleGate>
+            </RoleRoute>
           }
         />
-        <Route
-          path="leaves"
-          element={
-            <RoleGate role={role} allowedRoles={allowed.leaves}>
-              <EmployeeLeavePage />
-            </RoleGate>
-          }
-        />
-        <Route
-          path="approvals"
-          element={
-            <RoleGate role={role} allowedRoles={allowed.approvals}>
-              <ApprovalsPage />
-            </RoleGate>
-          }
-        />
+
+        <Route path="leaves" element={<EmployeeLeavePage />} />
+        <Route path="approvals" element={<ApprovalsPage />} />
+
         <Route
           path="reports/leave-balance"
           element={
-            <RoleGate role={role} allowedRoles={allowed.report}>
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
               <LeaveBalanceReportPage />
-            </RoleGate>
+            </RoleRoute>
           }
         />
       </Route>
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

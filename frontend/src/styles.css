@@ -281,8 +281,21 @@ h3 {
 }
 
 .page-title p,
-.page-card > p {
-  color: var(--muted);
+
+.info-text {
+  color: #0b5e59;
+  background: #e8f7f5;
+  border: 1px solid #c9e8e3;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.error-text {
+  color: #a63b19;
+  background: #ffefe8;
+  border: 1px solid #ffd6c6;
+  border-radius: 10px;
+  padding: 8px 10px;
 }
 
 .panel-grid {
@@ -368,8 +381,11 @@ button {
   transition: transform 0.16s ease;
 }
 
-button:hover {
-  transform: translateY(-1px);
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 button.secondary {
@@ -691,3 +707,5 @@ th {
     grid-auto-columns: 88%;
   }
 }
+
+

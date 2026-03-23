@@ -13,15 +13,18 @@ public class LeavesController : ControllerBase
 {
     private readonly ILeaveRequestService _leaveRequestService;
     private readonly ILeaveWorkflowService _leaveWorkflowService;
+    private readonly ILeaveBalanceService _leaveBalanceService;
     private readonly ICurrentUserService _currentUserService;
 
     public LeavesController(
         ILeaveRequestService leaveRequestService,
         ILeaveWorkflowService leaveWorkflowService,
+        ILeaveBalanceService leaveBalanceService,
         ICurrentUserService currentUserService)
     {
         _leaveRequestService = leaveRequestService;
         _leaveWorkflowService = leaveWorkflowService;
+        _leaveBalanceService = leaveBalanceService;
         _currentUserService = currentUserService;
     }
 
@@ -31,6 +34,22 @@ public class LeavesController : ControllerBase
     {
         var types = await _leaveRequestService.GetLeaveTypesAsync(cancellationToken);
         return Ok(types.Select(x => new LeaveTypeResponse(x.Code, x.Name)));
+    }
+
+    [HttpGet("holidays")]
+    [ProducesResponseType(typeof(IEnumerable<HolidayResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHolidays(CancellationToken cancellationToken)
+    {
+        var dates = await _leaveBalanceService.GetHolidaysAsync(cancellationToken);
+        return Ok(dates.Select(x => new HolidayResponse(x)));
+    }
+
+    [HttpGet("my-balances")]
+    [ProducesResponseType(typeof(IEnumerable<LeaveBalanceResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyBalances(CancellationToken cancellationToken)
+    {
+        var balances = await _leaveBalanceService.GetMyBalancesAsync(_currentUserService.UserId, cancellationToken);
+        return Ok(balances.Select(x => new LeaveBalanceResponse(x.LeaveTypeCode, x.OpeningBalance, x.Used, x.Adjustments, x.Available)));
     }
 
     [HttpPost]

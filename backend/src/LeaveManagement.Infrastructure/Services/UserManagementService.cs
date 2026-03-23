@@ -38,6 +38,11 @@ public class UserManagementService : IUserManagementService
             throw new InvalidOperationException("At least one role is required.");
         }
 
+        if (!IsStrongPassword(command.Password))
+        {
+            throw new InvalidOperationException("Password must be at least 8 characters and include uppercase, lowercase, digit, and special character.");
+        }
+
         var parsedRoles = command.Roles
             .Select(role => Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsed) ? parsed : (UserRole?)null)
             .ToArray();
@@ -101,5 +106,20 @@ public class UserManagementService : IUserManagementService
                 x.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
                 x.user.IsActive))
             .ToArray();
+    }
+
+    private static bool IsStrongPassword(string password)
+    {
+        if (password.Length < 8)
+        {
+            return false;
+        }
+
+        var hasUpper = password.Any(char.IsUpper);
+        var hasLower = password.Any(char.IsLower);
+        var hasDigit = password.Any(char.IsDigit);
+        var hasSpecial = password.Any(ch => !char.IsLetterOrDigit(ch));
+
+        return hasUpper && hasLower && hasDigit && hasSpecial;
     }
 }

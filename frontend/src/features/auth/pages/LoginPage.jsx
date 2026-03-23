@@ -1,59 +1,66 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { defaultRouteByRole, roleOptions } from "../../../app/roles";
+import { apiClient } from "../../../services/apiClient";
+import { saveToken } from "../../../services/tokenStorage";
+import { getRolesFromToken } from "../../../services/jwt";
+import { defaultRouteByRole, mapPrimaryRole } from "../../../app/roles";
 
-export function LoginPage({ role, onRoleChange }) {
+export function LoginPage({ onLoginSuccess }) {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    navigate(defaultRouteByRole[role] ?? "/dashboard/employee");
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await apiClient.post("/auth/login", { email, password });
+      const token = response.data?.accessToken;
+
+      if (!token) {
+        throw new Error("Token not found in login response.");
+      }
+
+      saveToken(token);
+      const roles = getRolesFromToken(token);
+      onLoginSuccess(roles);
+
+      const route = defaultRouteByRole(mapPrimaryRole(roles));
+      navigate(route, { replace: true });
+    } catch (err) {
+      const message = err.response?.data?.message ?? "Login failed. Check credentials and try again.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <section className="page-card login-card modern-login">
       <div className="login-hero">
-        <p className="eyebrow">Contemporary UI Refresh</p>
+        <p className="eyebrow">Secure Sign In</p>
         <h1>Welcome Back</h1>
-        <p>Use this mocked sign-in to preview role-based panels, color system, and interaction layout.</p>
-        <div className="hero-metrics">
-          <article>
-            <strong>24</strong>
-            <span>Open Requests</span>
-          </article>
-          <article>
-            <strong>3.2d</strong>
-            <span>Avg Approval</span>
-          </article>
-          <article>
-            <strong>91%</strong>
-            <span>Policy Compliance</span>
-          </article>
-        </div>
+        <p>Login with your credentials. Dashboard access is assigned automatically by your role.</p>
       </div>
 
       <form className="form-grid login-form" onSubmit={handleSubmit}>
         <label>
           Work Email
-          <input type="email" placeholder="employee@company.com" required />
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </label>
 
         <label>
           Password
-          <input type="password" placeholder="********" required />
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
         </label>
 
-        <label>
-          Role Preview
-          <select value={role} onChange={(event) => onRoleChange(event.target.value)}>
-            {roleOptions.map((roleOption) => (
-              <option key={roleOption.value} value={roleOption.value}>
-                {roleOption.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {error ? <p className="error-text">{error}</p> : null}
 
-        <button type="submit">Enter Workspace</button>
+        <button type="submit" disabled={loading}>{loading ? "Signing In..." : "Login"}</button>
       </form>
     </section>
   );

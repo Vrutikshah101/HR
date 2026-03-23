@@ -38,8 +38,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IHierarchyService, HierarchyService>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
         services.AddScoped<ILeaveRequestService, LeaveRequestService>();
         services.AddScoped<ILeaveWorkflowService, LeaveWorkflowService>();
+        services.AddScoped<INotificationService, LoggingNotificationService>();
         services.AddScoped<DevelopmentDataSeeder>();
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

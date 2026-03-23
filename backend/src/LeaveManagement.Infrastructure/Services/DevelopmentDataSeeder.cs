@@ -4,6 +4,7 @@ using LeaveManagement.Domain.Entities;
 using LeaveManagement.Domain.Enums;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LeaveManagement.Infrastructure.Services;
 
@@ -11,11 +12,13 @@ public class DevelopmentDataSeeder
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly LeaveOptions _leaveOptions;
 
-    public DevelopmentDataSeeder(ApplicationDbContext dbContext, IPasswordHasher passwordHasher)
+    public DevelopmentDataSeeder(ApplicationDbContext dbContext, IPasswordHasher passwordHasher, IOptions<LeaveOptions> leaveOptions)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
+        _leaveOptions = leaveOptions.Value;
     }
 
     public async Task SeedAsync(CancellationToken cancellationToken)
@@ -69,6 +72,9 @@ public class DevelopmentDataSeeder
             Level2ApproverEmployeeId = null
         }, cancellationToken);
 
+        await SeedBalancesAsync(employee.EmployeeId, cancellationToken);
+        await SeedBalancesAsync(manager.EmployeeId, cancellationToken);
+
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -109,5 +115,21 @@ public class DevelopmentDataSeeder
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new CreateUserResult(user.Id, employee.Id);
+    }
+
+    private async Task SeedBalancesAsync(Guid employeeId, CancellationToken cancellationToken)
+    {
+        foreach (var leaveType in _leaveOptions.Types)
+        {
+            await _dbContext.LeaveBalances.AddAsync(new LeaveBalance
+            {
+                Id = Guid.NewGuid(),
+                EmployeeId = employeeId,
+                LeaveTypeCode = leaveType.Code.Trim().ToUpperInvariant(),
+                OpeningBalance = leaveType.DefaultOpeningBalance,
+                Used = 0,
+                Adjustments = 0
+            }, cancellationToken);
+        }
     }
 }

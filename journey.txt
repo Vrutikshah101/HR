@@ -189,3 +189,63 @@ Major Task: API Integration
 Major Task: Validation and Documentation
 - Activity: Verified backend compilation after workflow implementation.
 - Activity: Updated API contract, workflow, test plan, and phase plan for Phase 5 signoff.
+
+Phase 6: Leave Balance + Holidays
+Major Task: Balance Engine Integration
+- Activity: Added `ILeaveBalanceService` abstraction and `LeaveBalanceService` implementation.
+- Activity: Added weekend/holiday-aware working-day calculator.
+- Activity: Added balance sufficiency validation on leave apply.
+- Activity: Added deduction on final approval and restore on approved cancellation.
+- Activity: Added leave balance and holiday read APIs:
+  - `GET /api/leaves/my-balances`
+  - `GET /api/leaves/holidays`
+
+Major Task: Config-Driven Leave Policy
+- Activity: Extended leave config with default opening balances and holiday dates.
+- Activity: Seeded initial leave balances for seeded employees.
+
+Phase 7: Dashboards
+Major Task: KPI Service Layer
+- Activity: Added `IDashboardService` and DB-driven `DashboardService`.
+- Activity: Implemented Employee, Manager, HR, Admin card calculations from persisted data.
+- Activity: Rewired dashboard controller endpoints to service-based responses.
+
+Phase 8: MIS Reports
+Major Task: Report Service Foundation
+- Activity: Added `IReportService` + `ReportService` for MIS data shaping.
+- Activity: Implemented report endpoints with filters:
+  - Leave balance
+  - Department summary
+  - Monthly utilization
+  - Approval summary
+- Activity: Added CSV export support via `format=csv` query parameter.
+- Activity: Rewired reports controller to JSON/CSV response modes.
+
+Validation
+- Activity: Backend solution compiled successfully after Phase 6-8 integration.
+
+Phase 9: Notifications + Hardening
+Major Task: Notification Hooks
+- Activity: Added notification abstraction (`INotificationService`).
+- Activity: Implemented `LoggingNotificationService` as baseline channel.
+- Activity: Triggered notifications on leave apply/approve/reject/cancel flows.
+
+Major Task: API Hardening
+- Activity: Added global exception middleware with structured problem details response.
+- Activity: Added global rate limiting and auth-specific rate limiting policy.
+- Activity: Added security headers middleware.
+- Activity: Tightened password policy for user provisioning.
+
+Phase 10: QA + Release
+Major Task: Automated Testing
+- Activity: Added `LeaveManagement.Tests` project under backend/tests.
+- Activity: Added test coverage for:
+  - password hashing behavior
+  - holiday/weekend working-day logic
+  - reject comment validation
+- Activity: Added test project to solution.
+- Activity: Executed build + test successfully.
+
+Major Task: Release Readiness Documentation
+- Activity: Updated phase plan/test plan/decision log for Phases 9 and 10 completion.
+- Activity: Marked system as ready for user acceptance validation.

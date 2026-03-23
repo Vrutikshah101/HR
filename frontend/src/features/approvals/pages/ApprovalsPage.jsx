@@ -1,84 +1,91 @@
+import { useEffect, useState } from "react";
 import { PageTitle } from "../../../components/PageTitle";
+import { apiClient } from "../../../services/apiClient";
+
+function statusLabel(status) {
+  const normalized = typeof status === "string" ? status.toLowerCase() : status;
+  if (normalized === 2 || normalized === "pendinglevel1") return "Pending Level 1";
+  if (normalized === 3 || normalized === "pendinglevel2") return "Pending Level 2";
+  if (normalized === 4 || normalized === "approved") return "Approved";
+  if (normalized === 5 || normalized === "rejected") return "Rejected";
+  if (normalized === 6 || normalized === "cancelled") return "Cancelled";
+  return String(status);
+}
 
 export function ApprovalsPage() {
+  const [rows, setRows] = useState([]);
+  const [message, setMessage] = useState("");
+  const [comments, setComments] = useState({});
+
+  async function loadPending() {
+    try {
+      const response = await apiClient.get("/leaves/team-pending");
+      setRows(response.data ?? []);
+    } catch (err) {
+      setMessage(err.response?.data?.message ?? "Failed to load approvals.");
+    }
+  }
+
+  useEffect(() => {
+    loadPending();
+  }, []);
+
+  async function runAction(id, action) {
+    try {
+      await apiClient.post(`/leaves/${id}/${action}`, { comment: comments[id] ?? "" });
+      setMessage(`Request ${action}d.`);
+      await loadPending();
+    } catch (err) {
+      setMessage(err.response?.data?.message ?? `${action} failed.`);
+    }
+  }
+
   return (
     <section className="page-card">
-      <PageTitle
-        title="Team Approvals"
-        subtitle="Split-panel approval board with level filters and action cards."
-      />
-
-      <section className="panel-grid">
-        <article className="glass-panel">
-          <h3>Queue Filter</h3>
-          <label className="range-block">
-            Prioritize urgency: 65%
-            <input type="range" min="0" max="100" defaultValue="65" />
-          </label>
-          <div className="flag-row">
-            <span className="flag amber">5 Level-2 Pending</span>
-            <span className="flag green">9 Within SLA</span>
-          </div>
-        </article>
-
-        <article className="glass-panel slider-panel">
-          <h3>Approval Lanes</h3>
-          <div className="h-slider" role="region" aria-label="Approval lanes">
-            <div className="slide-card">
-              <p>Lane 1</p>
-              <strong>Engineering - L1</strong>
-              <span>3 requests awaiting manager review.</span>
-            </div>
-            <div className="slide-card">
-              <p>Lane 2</p>
-              <strong>Support - L2</strong>
-              <span>2 requests escalated to L2 approver.</span>
-            </div>
-            <div className="slide-card">
-              <p>Lane 3</p>
-              <strong>HR - L1</strong>
-              <span>4 requests planned for same-day closure.</span>
-            </div>
-          </div>
-        </article>
-      </section>
+      <PageTitle title="Team Approvals" subtitle="Approve or reject pending requests." />
+      {message ? <p className="info-text">{message}</p> : null}
 
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Request Id</th>
-              <th>Employee</th>
+              <th>Employee Id</th>
               <th>Dates</th>
-              <th>Current Level</th>
+              <th>Status</th>
+              <th>Comment</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>LV-1001</td>
-              <td>E001 / Asha Sharma</td>
-              <td>2026-03-26 to 2026-03-27</td>
-              <td>Level 1</td>
-              <td>
-                <div className="action-row">
-                  <button type="button">Approve</button>
-                  <button type="button" className="secondary">Reject</button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>LV-0998</td>
-              <td>E014 / Rohit Das</td>
-              <td>2026-03-30 to 2026-04-01</td>
-              <td>Level 2</td>
-              <td>
-                <div className="action-row">
-                  <button type="button">Approve</button>
-                  <button type="button" className="secondary">Reject</button>
-                </div>
-              </td>
-            </tr>
+            {(rows ?? []).map((row) => (
+              <tr key={row.id}>
+                <td>{row.id}</td>
+                <td>{row.employeeId}</td>
+                <td>{row.startDate} to {row.endDate}</td>
+                <td>{statusLabel(row.status)}</td>
+                <td>
+                  <input
+                    value={comments[row.id] ?? ""}
+                    onChange={(e) => setComments((x) => ({ ...x, [row.id]: e.target.value }))}
+                    placeholder="Comment (required for reject)"
+                  />
+                </td>
+                <td>
+                  <div className="action-row">
+                    <button type="button" onClick={() => runAction(row.id, "approve")}>Approve</button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={!(comments[row.id] ?? "").trim()}
+                      onClick={() => runAction(row.id, "reject")}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
