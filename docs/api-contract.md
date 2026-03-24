@@ -6,6 +6,8 @@
 ## Users
 - `POST /api/users`
 - `GET /api/users`
+- `GET /api/users/me`
+- `PUT /api/users/me`
 
 ## Hierarchy
 - `PUT /api/hierarchy`

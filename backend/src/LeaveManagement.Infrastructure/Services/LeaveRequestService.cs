@@ -156,6 +156,28 @@ public class LeaveRequestService : ILeaveRequestService
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, EmployeeIdentityDto>> GetEmployeeIdentitiesAsync(IReadOnlyCollection<Guid> employeeIds, CancellationToken cancellationToken)
+    {
+        if (employeeIds.Count == 0)
+        {
+            return new Dictionary<Guid, EmployeeIdentityDto>();
+        }
+
+        var ids = employeeIds.Distinct().ToArray();
+
+        var rows = await _dbContext.Employees
+            .AsNoTracking()
+            .Where(x => ids.Contains(x.Id))
+            .Join(
+                _dbContext.Users.AsNoTracking(),
+                employee => employee.UserId,
+                user => user.Id,
+                (employee, user) => new EmployeeIdentityDto(employee.Id, employee.FullName, user.Email))
+            .ToArrayAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.EmployeeId, x => x);
+    }
+
     public async Task<LeaveRequest?> GetByIdAsync(Guid userId, IReadOnlyCollection<string> roles, Guid requestId, CancellationToken cancellationToken)
     {
         var employeeId = await ResolveEmployeeIdAsync(userId, cancellationToken);

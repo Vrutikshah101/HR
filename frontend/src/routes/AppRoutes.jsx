@@ -9,6 +9,7 @@ import { EmployeeDashboardPage } from "../features/dashboard/pages/EmployeeDashb
 import { HrDashboardPage } from "../features/dashboard/pages/HrDashboardPage";
 import { AdminDashboardPage } from "../features/dashboard/pages/AdminDashboardPage";
 import { LeaveBalanceReportPage } from "../features/reports/pages/LeaveBalanceReportPage";
+import { ProfilePage } from "../features/profile/pages/ProfilePage";
 import { clearToken, getToken } from "../services/tokenStorage";
 import { getRolesFromToken, hasRole } from "../services/jwt";
 import { defaultRouteByRole, mapPrimaryRole } from "../app/roles";
@@ -93,6 +94,7 @@ export function AppRoutes() {
 
         <Route path="leaves" element={<EmployeeLeavePage />} />
         <Route path="approvals" element={<ApprovalsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
 
         <Route
           path="reports/leave-balance"

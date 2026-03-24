@@ -30,18 +30,19 @@ export function getMenuItems(roles) {
   const items = [];
 
   if (isUser || isHr || isAdmin) {
-    items.push({ label: "Employee Dashboard", to: "/dashboard/employee" });
-    items.push({ label: "My Leaves", to: "/leaves" });
-    items.push({ label: "Approvals", to: "/approvals" });
+    items.push({ label: "Employee Dashboard", to: "/dashboard/employee", icon: "dashboard" });
+    items.push({ label: "My Leaves", to: "/leaves", icon: "leaves" });
+    items.push({ label: "Approvals", to: "/approvals", icon: "approvals" });
+    items.push({ label: "Profile", to: "/profile", icon: "profile" });
   }
 
   if (isHr || isAdmin) {
-    items.push({ label: "HR Dashboard", to: "/dashboard/hr" });
-    items.push({ label: "Leave Balance Report", to: "/reports/leave-balance" });
+    items.push({ label: "HR Dashboard", to: "/dashboard/hr", icon: "dashboard" });
+    items.push({ label: "Leave Balance Report", to: "/reports/leave-balance", icon: "reports" });
   }
 
   if (isAdmin) {
-    items.push({ label: "Admin Dashboard", to: "/dashboard/admin" });
+    items.push({ label: "Admin Dashboard", to: "/dashboard/admin", icon: "dashboard" });
   }
 
   return items;

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { DataGrid } from "../../../components/DataGrid";
 import { PageTitle } from "../../../components/PageTitle";
+import { trackActivity } from "../../../services/activityTracker";
 import { apiClient } from "../../../services/apiClient";
 
 export function LeaveBalanceReportPage() {
@@ -26,6 +28,7 @@ export function LeaveBalanceReportPage() {
   async function applyFilters(event) {
     event.preventDefault();
     setMessage("");
+    trackActivity("REPORT_FILTER", "Applied Leave Balance report filters.", { department, leaveTypeCode });
     await load({
       department: department || undefined,
       leaveTypeCode: leaveTypeCode || undefined
@@ -49,6 +52,7 @@ export function LeaveBalanceReportPage() {
       a.download = "leave-balance.csv";
       a.click();
       URL.revokeObjectURL(url);
+      trackActivity("REPORT_EXPORT", "Exported Leave Balance CSV.");
     } catch {
       setMessage("CSV export failed.");
     }
@@ -79,26 +83,16 @@ export function LeaveBalanceReportPage() {
         <button type="button" onClick={exportCsv}>Export CSV</button>
       </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th key={column}>{column}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={`${index}-${Object.values(row).join("-")}`}>
-                {columns.map((column) => (
-                  <td key={column}>{row[column] ?? ""}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        rows={rows}
+        searchPlaceholder="Search report rows..."
+        columns={columns.map((column) => ({
+          key: column,
+          label: column,
+          sortable: true,
+          filterable: true
+        }))}
+      />
     </section>
   );
 }

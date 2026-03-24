@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { DataGrid } from "../../../components/DataGrid";
 import { PageTitle } from "../../../components/PageTitle";
+import { trackActivity } from "../../../services/activityTracker";
 import { apiClient } from "../../../services/apiClient";
 
 function statusLabel(status) {
@@ -52,10 +54,6 @@ export function EmployeeLeavePage() {
     loadData();
   }, []);
 
-  const balanceMap = useMemo(() => {
-    return Object.fromEntries((balances ?? []).map((x) => [x.leaveTypeCode, x.available]));
-  }, [balances]);
-
   async function handleSubmit(event) {
     event.preventDefault();
     setMessage("");
@@ -70,6 +68,7 @@ export function EmployeeLeavePage() {
       });
 
       setMessage("Leave request submitted.");
+      trackActivity("LEAVE_APPLY", `Leave submitted for ${form.startDate} to ${form.endDate}.`);
       setForm((old) => ({ ...old, reason: "" }));
       await loadData();
     } catch (err) {
@@ -81,6 +80,7 @@ export function EmployeeLeavePage() {
     try {
       await apiClient.post(`/leaves/${id}/cancel`);
       setMessage("Leave cancelled.");
+      trackActivity("LEAVE_CANCEL", `Cancelled leave request ${id}.`);
       await loadData();
     } catch (err) {
       setMessage(err.response?.data?.message ?? "Cancel failed.");
@@ -132,59 +132,38 @@ export function EmployeeLeavePage() {
 
         <article className="glass-panel">
           <h3>Current Balances</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Available</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(balances ?? []).map((b) => (
-                  <tr key={b.leaveTypeCode}>
-                    <td>{b.leaveTypeCode}</td>
-                    <td>{b.available}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataGrid
+            rows={balances ?? []}
+            searchPlaceholder="Search leave balances..."
+            columns={[
+              { key: "leaveTypeCode", label: "Type", sortable: true, filterable: true },
+              { key: "available", label: "Available", sortable: true }
+            ]}
+          />
         </article>
       </section>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Request Id</th>
-              <th>Type</th>
-              <th>Dates</th>
-              <th>Days</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(leaves ?? []).map((row) => (
-              <tr key={row.id}>
-                <td>{row.id}</td>
-                <td>{row.leaveTypeCode}</td>
-                <td>{row.startDate} to {row.endDate}</td>
-                <td>{row.days}</td>
-              <td>{statusLabel(row.status)}</td>
-              <td>
-                  {canCancel(row.status) ? (
-                    <button type="button" className="secondary" onClick={() => handleCancel(row.id)}>
-                      Cancel
-                    </button>
-                  ) : "-"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        rows={leaves ?? []}
+        searchPlaceholder="Search leave requests..."
+        columns={[
+          { key: "id", label: "Request", sortable: true },
+          { key: "leaveTypeCode", label: "Type", sortable: true, filterable: true },
+          { key: "startDate", label: "Dates", sortable: true, render: (row) => `${row.startDate} to ${row.endDate}` },
+          { key: "days", label: "Days", sortable: true },
+          { key: "status", label: "Status", sortable: true, filterable: true, render: (row) => statusLabel(row.status) },
+          {
+            key: "action",
+            label: "Action",
+            sortable: false,
+            render: (row) => canCancel(row.status) ? (
+              <button type="button" className="secondary" onClick={() => handleCancel(row.id)}>
+                Cancel
+              </button>
+            ) : "-"
+          }
+        ]}
+      />
     </section>
   );
 }

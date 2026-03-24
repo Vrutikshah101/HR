@@ -8,17 +8,20 @@ namespace LeaveManagement.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize(Roles = "Admin,Hr")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserManagementService _userManagementService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public UsersController(IUserManagementService userManagementService)
+    public UsersController(IUserManagementService userManagementService, ICurrentUserService currentUserService)
     {
         _userManagementService = userManagementService;
+        _currentUserService = currentUserService;
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Hr")]
     [ProducesResponseType(typeof(CreateUserResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
@@ -45,6 +48,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin,Hr")]
     [ProducesResponseType(typeof(IEnumerable<UserSummaryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
@@ -57,7 +61,55 @@ public class UsersController : ControllerBase
             x.FullName,
             x.Department,
             x.Designation,
-            x.Roles,
-            x.IsActive)));
+                x.Roles,
+                x.IsActive)));
+    }
+
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(UserProfileResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
+    {
+        var profile = await _userManagementService.GetMyProfileAsync(_currentUserService.UserId, cancellationToken);
+        if (profile is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new UserProfileResponse(
+            profile.Email,
+            profile.EmployeeCode,
+            profile.FullName,
+            profile.Department,
+            profile.Designation,
+            profile.Roles,
+            profile.IsActive));
+    }
+
+    [HttpPut("me")]
+    [ProducesResponseType(typeof(UserProfileResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateMe([FromBody] UpdateUserProfileRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var profile = await _userManagementService.UpdateMyProfileAsync(
+                _currentUserService.UserId,
+                new UpdateUserProfileCommand(request.FullName, request.Department, request.Designation),
+                cancellationToken);
+
+            return Ok(new UserProfileResponse(
+                profile.Email,
+                profile.EmployeeCode,
+                profile.FullName,
+                profile.Department,
+                profile.Designation,
+                profile.Roles,
+                profile.IsActive));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

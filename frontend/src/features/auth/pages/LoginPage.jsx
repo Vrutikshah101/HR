@@ -4,6 +4,8 @@ import { apiClient } from "../../../services/apiClient";
 import { saveToken } from "../../../services/tokenStorage";
 import { getRolesFromToken } from "../../../services/jwt";
 import { defaultRouteByRole, mapPrimaryRole } from "../../../app/roles";
+import { trackActivity } from "../../../services/activityTracker";
+import { UserIcon } from "../../../components/icons";
 
 export function LoginPage({ onLoginSuccess }) {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ export function LoginPage({ onLoginSuccess }) {
 
       saveToken(token);
       const roles = getRolesFromToken(token);
+      trackActivity("LOGIN_SUCCESS", `Logged in as ${email}.`);
       onLoginSuccess(roles);
 
       const route = defaultRouteByRole(mapPrimaryRole(roles));
@@ -40,14 +43,32 @@ export function LoginPage({ onLoginSuccess }) {
   }
 
   return (
-    <section className="page-card login-card modern-login">
-      <div className="login-hero">
-        <p className="eyebrow">Secure Sign In</p>
-        <h1>Welcome Back</h1>
-        <p>Login with your credentials. Dashboard access is assigned automatically by your role.</p>
-      </div>
+    <section className="auth-layout">
+      <aside className="auth-showcase">
+        <p className="auth-kicker">Leave Management System</p>
+        <h1>Build faster approvals with one secure workspace</h1>
+        <p>
+          Track leave balances, approvals, and reports with role-based dashboards
+          designed for employees, HR teams, and administrators.
+        </p>
+        <div className="auth-pill-row">
+          <span>Live API</span>
+          <span>Role-Based Access</span>
+          <span>Audit Ready</span>
+        </div>
+      </aside>
 
-      <form className="form-grid login-form" onSubmit={handleSubmit}>
+      <form className="auth-card" onSubmit={handleSubmit}>
+        <div className="auth-card-head">
+          <div className="auth-logo">
+            <UserIcon width="24" height="24" />
+          </div>
+          <div>
+            <h2>Welcome Back</h2>
+            <p>Sign in to continue to your dashboard</p>
+          </div>
+        </div>
+
         <label>
           Work Email
           <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
@@ -58,9 +79,18 @@ export function LoginPage({ onLoginSuccess }) {
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
         </label>
 
+        <div className="auth-row">
+          <span className="muted-small">Need help? Contact your HR admin.</span>
+          <button type="button" className="link-button">Forgot Password?</button>
+        </div>
+
         {error ? <p className="error-text">{error}</p> : null}
 
-        <button type="submit" disabled={loading}>{loading ? "Signing In..." : "Login"}</button>
+        <button type="submit" className="login-submit" disabled={loading}>
+          {loading ? "Signing In..." : "Login to Portal"}
+        </button>
+
+        <p className="support-line">Helpdesk: support@leave.local</p>
       </form>
     </section>
   );

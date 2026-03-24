@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { DataGrid } from "../../../components/DataGrid";
 import { PageTitle } from "../../../components/PageTitle";
+import { trackActivity } from "../../../services/activityTracker";
 import { apiClient } from "../../../services/apiClient";
 
 function statusLabel(status) {
@@ -34,6 +36,7 @@ export function ApprovalsPage() {
     try {
       await apiClient.post(`/leaves/${id}/${action}`, { comment: comments[id] ?? "" });
       setMessage(`Request ${action}d.`);
+      trackActivity("APPROVAL_ACTION", `${action.toUpperCase()} request ${id}.`);
       await loadPending();
     } catch (err) {
       setMessage(err.response?.data?.message ?? `${action} failed.`);
@@ -45,50 +48,57 @@ export function ApprovalsPage() {
       <PageTitle title="Team Approvals" subtitle="Approve or reject pending requests." />
       {message ? <p className="info-text">{message}</p> : null}
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Request Id</th>
-              <th>Employee Id</th>
-              <th>Dates</th>
-              <th>Status</th>
-              <th>Comment</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(rows ?? []).map((row) => (
-              <tr key={row.id}>
-                <td>{row.id}</td>
-                <td>{row.employeeId}</td>
-                <td>{row.startDate} to {row.endDate}</td>
-                <td>{statusLabel(row.status)}</td>
-                <td>
-                  <input
-                    value={comments[row.id] ?? ""}
-                    onChange={(e) => setComments((x) => ({ ...x, [row.id]: e.target.value }))}
-                    placeholder="Comment (required for reject)"
-                  />
-                </td>
-                <td>
-                  <div className="action-row">
-                    <button type="button" onClick={() => runAction(row.id, "approve")}>Approve</button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      disabled={!(comments[row.id] ?? "").trim()}
-                      onClick={() => runAction(row.id, "reject")}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid
+        rows={rows ?? []}
+        searchPlaceholder="Search pending approvals..."
+        columns={[
+          { key: "id", label: "Request", sortable: true },
+          {
+            key: "employeeName",
+            label: "Employee",
+            sortable: true,
+            filterable: true,
+            render: (row) => (
+              <div>
+                <strong>{row.employeeName ?? "User"}</strong>
+                <div className="cell-sub">{row.employeeEmail ?? "-"}</div>
+              </div>
+            )
+          },
+          { key: "startDate", label: "Dates", sortable: true, render: (row) => `${row.startDate} to ${row.endDate}` },
+          { key: "status", label: "Status", sortable: true, filterable: true, render: (row) => statusLabel(row.status) },
+          {
+            key: "comment",
+            label: "Comment",
+            sortable: false,
+            render: (row) => (
+              <input
+                value={comments[row.id] ?? ""}
+                onChange={(e) => setComments((x) => ({ ...x, [row.id]: e.target.value }))}
+                placeholder="Comment (required for reject)"
+              />
+            )
+          },
+          {
+            key: "action",
+            label: "Action",
+            sortable: false,
+            render: (row) => (
+              <div className="action-row">
+                <button type="button" onClick={() => runAction(row.id, "approve")}>Approve</button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={!(comments[row.id] ?? "").trim()}
+                  onClick={() => runAction(row.id, "reject")}
+                >
+                  Reject
+                </button>
+              </div>
+            )
+          }
+        ]}
+      />
     </section>
   );
 }

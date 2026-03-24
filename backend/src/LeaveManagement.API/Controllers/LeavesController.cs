@@ -78,7 +78,8 @@ public class LeavesController : ControllerBase
     public async Task<IActionResult> GetMy(CancellationToken cancellationToken)
     {
         var leaves = await _leaveRequestService.GetMyAsync(_currentUserService.UserId, cancellationToken);
-        return Ok(leaves.Select(ToResponse));
+        var identities = await _leaveRequestService.GetEmployeeIdentitiesAsync(leaves.Select(x => x.EmployeeId).Distinct().ToArray(), cancellationToken);
+        return Ok(leaves.Select(x => ToResponse(x, identities)));
     }
 
     [HttpGet("team-pending")]
@@ -86,7 +87,8 @@ public class LeavesController : ControllerBase
     public async Task<IActionResult> GetTeamPending(CancellationToken cancellationToken)
     {
         var leaves = await _leaveRequestService.GetTeamPendingAsync(_currentUserService.UserId, cancellationToken);
-        return Ok(leaves.Select(ToResponse));
+        var identities = await _leaveRequestService.GetEmployeeIdentitiesAsync(leaves.Select(x => x.EmployeeId).Distinct().ToArray(), cancellationToken);
+        return Ok(leaves.Select(x => ToResponse(x, identities)));
     }
 
     [HttpGet("{id:guid}")]
@@ -101,7 +103,8 @@ public class LeavesController : ControllerBase
             return NotFound();
         }
 
-        return Ok(ToResponse(leave));
+        var identities = await _leaveRequestService.GetEmployeeIdentitiesAsync(new[] { leave.EmployeeId }, cancellationToken);
+        return Ok(ToResponse(leave, identities));
     }
 
     [HttpPost("{id:guid}/approve")]
@@ -152,11 +155,18 @@ public class LeavesController : ControllerBase
         }
     }
 
-    private static LeaveResponse ToResponse(LeaveManagement.Domain.Entities.LeaveRequest leave)
+    private static LeaveResponse ToResponse(
+        LeaveManagement.Domain.Entities.LeaveRequest leave,
+        IReadOnlyDictionary<Guid, LeaveManagement.Application.Leaves.EmployeeIdentityDto>? identities = null)
     {
+        identities ??= new Dictionary<Guid, LeaveManagement.Application.Leaves.EmployeeIdentityDto>();
+        identities.TryGetValue(leave.EmployeeId, out var identity);
+
         return new LeaveResponse(
             leave.Id,
             leave.EmployeeId,
+            identity?.FullName,
+            identity?.Email,
             leave.LeaveTypeCode,
             leave.StartDate,
             leave.EndDate,

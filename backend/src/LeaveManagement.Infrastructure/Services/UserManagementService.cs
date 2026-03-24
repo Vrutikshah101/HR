@@ -108,6 +108,75 @@ public class UserManagementService : IUserManagementService
             .ToArray();
     }
 
+    public async Task<UserProfile?> GetMyProfileAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var row = await _dbContext.Users
+            .Include(x => x.RoleAssignments)
+            .Join(
+                _dbContext.Employees,
+                user => user.Id,
+                employee => employee.UserId,
+                (user, employee) => new { user, employee })
+            .SingleOrDefaultAsync(x => x.user.Id == userId, cancellationToken);
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        return new UserProfile(
+            row.user.Id,
+            row.employee.Id,
+            row.user.Email,
+            row.employee.EmployeeCode,
+            row.employee.FullName,
+            row.employee.Department,
+            row.employee.Designation,
+            row.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
+            row.user.IsActive);
+    }
+
+    public async Task<UserProfile> UpdateMyProfileAsync(Guid userId, UpdateUserProfileCommand command, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(command.FullName)
+            || string.IsNullOrWhiteSpace(command.Department)
+            || string.IsNullOrWhiteSpace(command.Designation))
+        {
+            throw new InvalidOperationException("Full name, department, and designation are required.");
+        }
+
+        var row = await _dbContext.Users
+            .Include(x => x.RoleAssignments)
+            .Join(
+                _dbContext.Employees,
+                user => user.Id,
+                employee => employee.UserId,
+                (user, employee) => new { user, employee })
+            .SingleOrDefaultAsync(x => x.user.Id == userId, cancellationToken);
+
+        if (row is null)
+        {
+            throw new InvalidOperationException("User profile not found.");
+        }
+
+        row.employee.FullName = command.FullName.Trim();
+        row.employee.Department = command.Department.Trim();
+        row.employee.Designation = command.Designation.Trim();
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new UserProfile(
+            row.user.Id,
+            row.employee.Id,
+            row.user.Email,
+            row.employee.EmployeeCode,
+            row.employee.FullName,
+            row.employee.Department,
+            row.employee.Designation,
+            row.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
+            row.user.IsActive);
+    }
+
     private static bool IsStrongPassword(string password)
     {
         if (password.Length < 8)
