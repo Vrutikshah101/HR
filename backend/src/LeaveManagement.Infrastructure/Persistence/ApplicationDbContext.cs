@@ -13,7 +13,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<UserRoleAssignment> UserRoles => Set<UserRoleAssignment>();
     public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Designation> Designations => Set<Designation>();
+    public DbSet<DepartmentDesignationMap> DepartmentDesignationMaps => Set<DepartmentDesignationMap>();
     public DbSet<ReportingHierarchy> ReportingHierarchies => Set<ReportingHierarchy>();
+    public DbSet<LeaveTypeMaster> LeaveTypes => Set<LeaveTypeMaster>();
+    public DbSet<Holiday> Holidays => Set<Holiday>();
     public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
     public DbSet<LeaveRequestApproval> LeaveRequestApprovals => Set<LeaveRequestApproval>();
     public DbSet<LeaveBalance> LeaveBalances => Set<LeaveBalance>();

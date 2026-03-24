@@ -25,7 +25,7 @@ public class LeaveBalanceService : ILeaveBalanceService
             return 0;
         }
 
-        var holidays = _leaveOptions.Holidays.Select(x => x.Date).ToHashSet();
+        var holidays = GetHolidaySet();
         var total = 0m;
 
         for (var day = startDate; day <= endDate; day = day.AddDays(1))
@@ -101,12 +101,32 @@ public class LeaveBalanceService : ILeaveBalanceService
 
     public Task<IReadOnlyCollection<DateOnly>> GetHolidaysAsync(CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<DateOnly> holidays = _leaveOptions.Holidays
+        return GetHolidaysInternalAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyCollection<DateOnly>> GetHolidaysInternalAsync(CancellationToken cancellationToken)
+    {
+        var dbHolidays = await _dbContext.Holidays.AsNoTracking().OrderBy(x => x.Date).Select(x => x.Date).ToArrayAsync(cancellationToken);
+        if (dbHolidays.Length > 0)
+        {
+            return dbHolidays;
+        }
+
+        return _leaveOptions.Holidays
             .Select(x => x.Date)
             .OrderBy(x => x)
             .ToArray();
+    }
 
-        return Task.FromResult(holidays);
+    private HashSet<DateOnly> GetHolidaySet()
+    {
+        var dbHolidays = _dbContext.Holidays.AsNoTracking().Select(x => x.Date).ToList();
+        if (dbHolidays.Count > 0)
+        {
+            return dbHolidays.ToHashSet();
+        }
+
+        return _leaveOptions.Holidays.Select(x => x.Date).ToHashSet();
     }
 
     private async Task<LeaveBalance> GetOrCreateBalanceAsync(Guid employeeId, string leaveTypeCode, CancellationToken cancellationToken)

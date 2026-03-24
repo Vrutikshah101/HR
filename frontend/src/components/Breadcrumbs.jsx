@@ -7,9 +7,19 @@ const labelMap = {
   admin: "Admin",
   leaves: "My Leaves",
   approvals: "Approvals",
+  activity: "Activity Tracker",
+  hierarchy: "Hierarchy",
+  setup: "Workflow Setup",
   reports: "Reports",
   "leave-balance": "Leave Balance",
-  profile: "Profile"
+  masters: "Masters",
+  departments: "Departments",
+  designations: "Designations",
+  "department-designation-maps": "Dept-Desig Mapping",
+  "leave-types": "Leave Types",
+  holidays: "Holidays",
+  users: "Users",
+  new: "Register"
 };
 
 function toLabel(segment) {

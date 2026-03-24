@@ -9,7 +9,14 @@ import { EmployeeDashboardPage } from "../features/dashboard/pages/EmployeeDashb
 import { HrDashboardPage } from "../features/dashboard/pages/HrDashboardPage";
 import { AdminDashboardPage } from "../features/dashboard/pages/AdminDashboardPage";
 import { LeaveBalanceReportPage } from "../features/reports/pages/LeaveBalanceReportPage";
-import { ProfilePage } from "../features/profile/pages/ProfilePage";
+import { DepartmentsMasterPage } from "../features/masters/pages/DepartmentsMasterPage";
+import { DesignationsMasterPage } from "../features/masters/pages/DesignationsMasterPage";
+import { DepartmentDesignationMapPage } from "../features/masters/pages/DepartmentDesignationMapPage";
+import { LeaveTypesMasterPage } from "../features/masters/pages/LeaveTypesMasterPage";
+import { HolidaysMasterPage } from "../features/masters/pages/HolidaysMasterPage";
+import { UserRegistrationPage } from "../features/users/pages/UserRegistrationPage";
+import { ActivityTrackerPage } from "../features/activity/pages/ActivityTrackerPage";
+import { HierarchySetupPage } from "../features/hierarchy/pages/HierarchySetupPage";
 import { clearToken, getToken } from "../services/tokenStorage";
 import { getRolesFromToken, hasRole } from "../services/jwt";
 import { defaultRouteByRole, mapPrimaryRole } from "../app/roles";
@@ -94,7 +101,63 @@ export function AppRoutes() {
 
         <Route path="leaves" element={<EmployeeLeavePage />} />
         <Route path="approvals" element={<ApprovalsPage />} />
-        <Route path="profile" element={<ProfilePage />} />
+        <Route path="activity" element={<ActivityTrackerPage />} />
+        <Route
+          path="users/new"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <UserRegistrationPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="hierarchy/setup"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <HierarchySetupPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="masters/departments"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <DepartmentsMasterPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="masters/designations"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <DesignationsMasterPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="masters/department-designation-maps"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <DepartmentDesignationMapPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="masters/leave-types"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <LeaveTypesMasterPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="masters/holidays"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <HolidaysMasterPage />
+            </RoleRoute>
+          }
+        />
 
         <Route
           path="reports/leave-balance"

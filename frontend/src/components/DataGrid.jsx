@@ -112,7 +112,7 @@ export function DataGrid({ columns, rows, emptyText = "No records.", searchPlace
                   {column.sortable ? (
                     <button type="button" className="link-sort" onClick={() => onSort(column.key)}>
                       {column.label}
-                      {sortKey === column.key ? (sortDirection === "asc" ? " ▲" : " ▼") : ""}
+                      {sortKey === column.key ? (sortDirection === "asc" ? " (asc)" : " (desc)") : ""}
                     </button>
                   ) : column.label}
                 </th>

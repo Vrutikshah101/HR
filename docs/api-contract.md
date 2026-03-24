@@ -51,6 +51,16 @@
 - `GET /api/reports/monthly-utilization`
 - `GET /api/reports/approval-summary`
 
+## Masters (Schema Alignment Phase 1)
+- `GET /api/masters/departments`
+- `POST /api/masters/departments`
+- `GET /api/masters/designations`
+- `POST /api/masters/designations`
+- `GET /api/masters/leave-types`
+- `POST /api/masters/leave-types`
+- `GET /api/masters/holidays`
+- `POST /api/masters/holidays`
+
 ### Report Filters
 - Leave balance: `department`, `leaveTypeCode`, `format`
 - Department summary: `dateFrom`, `dateTo`, `format`

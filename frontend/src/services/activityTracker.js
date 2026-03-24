@@ -1,3 +1,5 @@
+import { emitToast } from "./toast";
+
 const storageKey = "lms.activity.v1";
 const maxItems = 200;
 let memoryFallback = [];
@@ -39,6 +41,10 @@ export function trackActivity(type, message, metadata = {}) {
   const items = readAll();
   items.unshift(next);
   writeAll(items);
+
+  if (type !== "PAGE_VISIT") {
+    emitToast(message, "success", 2500);
+  }
 }
 
 export function trackPageVisit(pathname) {

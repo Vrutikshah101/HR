@@ -40,6 +40,19 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
             .HasMaxLength(100)
             .IsRequired();
 
+        builder.Property(x => x.Gender)
+            .HasColumnName("gender")
+            .HasMaxLength(20);
+
+        builder.Property(x => x.DateOfBirth)
+            .HasColumnName("date_of_birth");
+
+        builder.Property(x => x.JoinDate)
+            .HasColumnName("join_date");
+
+        builder.Property(x => x.DateOfRelieving)
+            .HasColumnName("date_of_relieving");
+
         builder.HasIndex(x => x.UserId)
             .IsUnique();
 

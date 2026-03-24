@@ -30,19 +30,42 @@ export function getMenuItems(roles) {
   const items = [];
 
   if (isUser || isHr || isAdmin) {
-    items.push({ label: "Employee Dashboard", to: "/dashboard/employee", icon: "dashboard" });
-    items.push({ label: "My Leaves", to: "/leaves", icon: "leaves" });
-    items.push({ label: "Approvals", to: "/approvals", icon: "approvals" });
-    items.push({ label: "Profile", to: "/profile", icon: "profile" });
+    items.push({
+      label: "Leave Master",
+      icon: "leaves",
+      children: [
+        { label: "My Leave", to: "/leaves", icon: "leaves" },
+        { label: "Approval", to: "/approvals", icon: "approvals" },
+        { label: "Activity Tracker", to: "/activity", icon: "reports" }
+      ]
+    });
   }
 
   if (isHr || isAdmin) {
-    items.push({ label: "HR Dashboard", to: "/dashboard/hr", icon: "dashboard" });
-    items.push({ label: "Leave Balance Report", to: "/reports/leave-balance", icon: "reports" });
-  }
+    items.push({
+      label: "Organization Setup",
+      icon: "profile",
+      children: [
+        { label: "User Registration", to: "/users/new", icon: "profile" },
+        { label: "Hierarchy Workflow", to: "/hierarchy/setup", icon: "reports" }
+      ]
+    });
 
-  if (isAdmin) {
-    items.push({ label: "Admin Dashboard", to: "/dashboard/admin", icon: "dashboard" });
+    const reportChildren = [
+      { label: "Leave Balance Report", to: "/reports/leave-balance", icon: "reports" }
+    ];
+
+    if (isAdmin) {
+      reportChildren.push({ label: "Admin Dashboards", to: "/dashboard/admin", icon: "dashboard" });
+    } else if (isHr) {
+      reportChildren.push({ label: "Admin Dashboards", to: "/dashboard/hr", icon: "dashboard" });
+    }
+
+    items.push({
+      label: "Reports",
+      icon: "reports",
+      children: reportChildren
+    });
   }
 
   return items;

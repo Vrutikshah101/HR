@@ -89,81 +89,91 @@ export function EmployeeLeavePage() {
 
   return (
     <section className="page-card">
-      <PageTitle title="My Leaves" subtitle="Apply, track history, and manage leave balance." />
+      <PageTitle title="Leave Information" subtitle="Leave request, account summary, and detailed history." />
 
       {message ? <p className="info-text">{message}</p> : null}
 
-      <section className="panel-grid">
-        <article className="glass-panel">
-          <h3>Apply Leave</h3>
-          <form className="form-grid split" onSubmit={handleSubmit}>
-            <label>
-              Leave Type
-              <select value={form.leaveTypeCode} onChange={(e) => setForm((x) => ({ ...x, leaveTypeCode: e.target.value }))}>
-                {(types.length ? types : [{ code: "CL", name: "Casual Leave" }]).map((type) => (
-                  <option key={type.code} value={type.code}>{type.code} - {type.name}</option>
-                ))}
-              </select>
-            </label>
+      <article className="glass-panel">
+        <h3>Leave Request</h3>
 
-            <label>
-              Start Date
-              <input type="date" value={form.startDate} onChange={(e) => setForm((x) => ({ ...x, startDate: e.target.value }))} required />
-            </label>
+        <form className="form-grid split leave-request-form" onSubmit={handleSubmit}>
+          <label>
+            Type Of Leave
+            <select value={form.leaveTypeCode} onChange={(e) => setForm((x) => ({ ...x, leaveTypeCode: e.target.value }))}>
+              {(types.length ? types : [{ code: "CL", name: "Casual Leave" }]).map((type) => (
+                <option key={type.code} value={type.code}>{type.name}</option>
+              ))}
+            </select>
+          </label>
 
-            <label>
-              End Date
-              <input type="date" value={form.endDate} onChange={(e) => setForm((x) => ({ ...x, endDate: e.target.value }))} required />
-            </label>
+          <label>
+            Start Date
+            <input type="date" value={form.startDate} onChange={(e) => setForm((x) => ({ ...x, startDate: e.target.value }))} required />
+          </label>
 
-            <label>
-              Days
-              <input type="number" min="0.5" step="0.5" value={form.days} onChange={(e) => setForm((x) => ({ ...x, days: e.target.value }))} required />
-            </label>
+          <label>
+            End Date
+            <input type="date" value={form.endDate} onChange={(e) => setForm((x) => ({ ...x, endDate: e.target.value }))} required />
+          </label>
 
-            <label className="full-width">
-              Reason
-              <textarea rows="3" value={form.reason} onChange={(e) => setForm((x) => ({ ...x, reason: e.target.value }))} required />
-            </label>
+          <label>
+            Selected Leave Balance
+            <input
+              readOnly
+              value={balances.find((x) => x.leaveTypeCode === form.leaveTypeCode)?.available ?? 0}
+            />
+          </label>
 
-            <button type="submit">Submit Leave Request</button>
-          </form>
-        </article>
+          <label>
+            Total No Of Leave Applied
+            <input type="number" min="0.5" step="0.5" value={form.days} onChange={(e) => setForm((x) => ({ ...x, days: e.target.value }))} required />
+          </label>
 
-        <article className="glass-panel">
-          <h3>Current Balances</h3>
-          <DataGrid
-            rows={balances ?? []}
-            searchPlaceholder="Search leave balances..."
-            columns={[
-              { key: "leaveTypeCode", label: "Type", sortable: true, filterable: true },
-              { key: "available", label: "Available", sortable: true }
-            ]}
-          />
-        </article>
-      </section>
+          <label className="full-width">
+            Leave Reason
+            <textarea rows="3" value={form.reason} onChange={(e) => setForm((x) => ({ ...x, reason: e.target.value }))} required />
+          </label>
 
-      <DataGrid
-        rows={leaves ?? []}
-        searchPlaceholder="Search leave requests..."
-        columns={[
-          { key: "id", label: "Request", sortable: true },
-          { key: "leaveTypeCode", label: "Type", sortable: true, filterable: true },
-          { key: "startDate", label: "Dates", sortable: true, render: (row) => `${row.startDate} to ${row.endDate}` },
-          { key: "days", label: "Days", sortable: true },
-          { key: "status", label: "Status", sortable: true, filterable: true, render: (row) => statusLabel(row.status) },
-          {
-            key: "action",
-            label: "Action",
-            sortable: false,
-            render: (row) => canCancel(row.status) ? (
-              <button type="button" className="secondary" onClick={() => handleCancel(row.id)}>
-                Cancel
-              </button>
-            ) : "-"
-          }
-        ]}
-      />
+          <button type="submit">Apply</button>
+        </form>
+      </article>
+
+      <article className="glass-panel">
+        <h3>Leave Account</h3>
+        <DataGrid
+          rows={balances ?? []}
+          searchPlaceholder="Search leave balances..."
+          columns={[
+            { key: "leaveTypeCode", label: "Type", sortable: true, filterable: true },
+            { key: "available", label: "Available", sortable: true }
+          ]}
+        />
+      </article>
+
+      <article className="glass-panel">
+        <h3>Leave History</h3>
+        <DataGrid
+          rows={leaves ?? []}
+          searchPlaceholder="Search leave requests..."
+          columns={[
+            { key: "id", label: "Request", sortable: true },
+            { key: "leaveTypeCode", label: "Type", sortable: true, filterable: true },
+            { key: "startDate", label: "Dates", sortable: true, render: (row) => `${row.startDate} to ${row.endDate}` },
+            { key: "days", label: "Days", sortable: true },
+            { key: "status", label: "Status", sortable: true, filterable: true, render: (row) => statusLabel(row.status) },
+            {
+              key: "action",
+              label: "Action",
+              sortable: false,
+              render: (row) => canCancel(row.status) ? (
+                <button type="button" className="secondary" onClick={() => handleCancel(row.id)}>
+                  Cancel
+                </button>
+              ) : "-"
+            }
+          ]}
+        />
+      </article>
     </section>
   );
 }

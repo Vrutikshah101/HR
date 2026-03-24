@@ -8,4 +8,8 @@ public class Employee
     public string FullName { get; set; } = string.Empty;
     public string Department { get; set; } = string.Empty;
     public string Designation { get; set; } = string.Empty;
+    public string? Gender { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public DateOnly? JoinDate { get; set; }
+    public DateOnly? DateOfRelieving { get; set; }
 }

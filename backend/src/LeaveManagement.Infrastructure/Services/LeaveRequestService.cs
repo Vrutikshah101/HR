@@ -40,14 +40,29 @@ public class LeaveRequestService : ILeaveRequestService
 
     public Task<IReadOnlyCollection<LeaveTypeDto>> GetLeaveTypesAsync(CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<LeaveTypeDto> result = _leaveOptions.Types
+        return GetLeaveTypesInternalAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyCollection<LeaveTypeDto>> GetLeaveTypesInternalAsync(CancellationToken cancellationToken)
+    {
+        var dbRows = await _dbContext.LeaveTypes
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Code)
+            .Select(x => new LeaveTypeDto(x.Code, x.Name))
+            .ToArrayAsync(cancellationToken);
+
+        if (dbRows.Length > 0)
+        {
+            return dbRows;
+        }
+
+        return _leaveOptions.Types
             .Where(x => !string.IsNullOrWhiteSpace(x.Code) && !string.IsNullOrWhiteSpace(x.Name))
             .Select(x => new LeaveTypeDto(x.Code.Trim().ToUpperInvariant(), x.Name.Trim()))
             .DistinctBy(x => x.Code)
             .OrderBy(x => x.Code)
             .ToArray();
-
-        return Task.FromResult(result);
     }
 
     public async Task<LeaveRequest> ApplyAsync(Guid userId, ApplyLeaveCommand command, CancellationToken cancellationToken)

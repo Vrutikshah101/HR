@@ -1,6 +1,7 @@
 using LeaveManagement.API.Contracts.Users;
 using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Application.Users;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,6 +37,10 @@ public class UsersController : ControllerBase
                     request.FullName,
                     request.Department,
                     request.Designation,
+                    request.Gender,
+                    request.DateOfBirth,
+                    request.JoinDate,
+                    request.DateOfRelieving,
                     request.Roles),
                 cancellationToken);
 
@@ -61,8 +66,12 @@ public class UsersController : ControllerBase
             x.FullName,
             x.Department,
             x.Designation,
-                x.Roles,
-                x.IsActive)));
+            x.Gender,
+            x.DateOfBirth,
+            x.JoinDate,
+            x.DateOfRelieving,
+            x.Roles,
+            x.IsActive)));
     }
 
     [HttpGet("me")]
@@ -82,6 +91,10 @@ public class UsersController : ControllerBase
             profile.FullName,
             profile.Department,
             profile.Designation,
+            profile.Gender,
+            profile.DateOfBirth,
+            profile.JoinDate,
+            profile.DateOfRelieving,
             profile.Roles,
             profile.IsActive));
     }
@@ -104,12 +117,21 @@ public class UsersController : ControllerBase
                 profile.FullName,
                 profile.Department,
                 profile.Designation,
+                profile.Gender,
+                profile.DateOfBirth,
+                profile.JoinDate,
+                profile.DateOfRelieving,
                 profile.Roles,
                 profile.IsActive));
         }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (DbUpdateException ex)
+        {
+            var root = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(new { message = $"Registration failed due to database update error: {root}" });
         }
     }
 }

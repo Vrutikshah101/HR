@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IHierarchyService, HierarchyService>();
+        services.AddScoped<IMasterDataService, MasterDataService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();

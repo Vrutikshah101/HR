@@ -43,6 +43,15 @@ public class UserManagementService : IUserManagementService
             throw new InvalidOperationException("Password must be at least 8 characters and include uppercase, lowercase, digit, and special character.");
         }
 
+        if (!string.IsNullOrWhiteSpace(command.Gender))
+        {
+            var normalizedGender = command.Gender.Trim().ToUpperInvariant();
+            if (normalizedGender is not ("MALE" or "FEMALE" or "OTHER"))
+            {
+                throw new InvalidOperationException("Gender must be MALE, FEMALE, or OTHER.");
+            }
+        }
+
         var parsedRoles = command.Roles
             .Select(role => Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsed) ? parsed : (UserRole?)null)
             .ToArray();
@@ -73,7 +82,11 @@ public class UserManagementService : IUserManagementService
             EmployeeCode = employeeCode,
             FullName = command.FullName.Trim(),
             Department = command.Department.Trim(),
-            Designation = command.Designation.Trim()
+            Designation = command.Designation.Trim(),
+            Gender = string.IsNullOrWhiteSpace(command.Gender) ? null : command.Gender.Trim().ToUpperInvariant(),
+            DateOfBirth = command.DateOfBirth,
+            JoinDate = command.JoinDate,
+            DateOfRelieving = command.DateOfRelieving
         };
 
         await _dbContext.Users.AddAsync(user, cancellationToken);
@@ -103,6 +116,10 @@ public class UserManagementService : IUserManagementService
                 x.employee.FullName,
                 x.employee.Department,
                 x.employee.Designation,
+                x.employee.Gender,
+                x.employee.DateOfBirth,
+                x.employee.JoinDate,
+                x.employee.DateOfRelieving,
                 x.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
                 x.user.IsActive))
             .ToArray();
@@ -132,6 +149,10 @@ public class UserManagementService : IUserManagementService
             row.employee.FullName,
             row.employee.Department,
             row.employee.Designation,
+            row.employee.Gender,
+            row.employee.DateOfBirth,
+            row.employee.JoinDate,
+            row.employee.DateOfRelieving,
             row.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
             row.user.IsActive);
     }
@@ -173,6 +194,10 @@ public class UserManagementService : IUserManagementService
             row.employee.FullName,
             row.employee.Department,
             row.employee.Designation,
+            row.employee.Gender,
+            row.employee.DateOfBirth,
+            row.employee.JoinDate,
+            row.employee.DateOfRelieving,
             row.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
             row.user.IsActive);
     }
