@@ -1,0 +1,14 @@
+flowchart TB
+    Domain[LeaveManagement.Domain]
+    Application[LeaveManagement.Application]
+    Infrastructure[LeaveManagement.Infrastructure]
+    API[LeaveManagement.API]
+    Tests[LeaveManagement.Tests]
+
+    API --> Application
+    API --> Infrastructure
+    Infrastructure --> Application
+    Infrastructure --> Domain
+    Application --> Domain
+    Tests --> API
+    Tests --> Infrastructure

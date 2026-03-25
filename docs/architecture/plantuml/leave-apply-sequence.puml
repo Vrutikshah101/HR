@@ -1,0 +1,19 @@
+@startuml
+!theme plain
+actor User
+participant Frontend
+participant "LeaveManagement.API" as API
+participant "LeaveRequestService" as SVC
+participant "LeaveBalanceService" as BAL
+database MySQL
+collections Redis
+
+User -> Frontend: Apply Leave
+Frontend -> API: POST /api/leaves
+API -> SVC: ApplyAsync
+SVC -> BAL: ValidateSufficientBalanceAsync
+BAL -> MySQL: Read balance
+SVC -> MySQL: Save leave request
+SVC -> Redis: Invalidate keys
+API --> Frontend: Success
+@enduml

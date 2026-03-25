@@ -27,7 +27,7 @@ public class LeaveBalanceServiceTests
             ]
         });
 
-        var service = new LeaveBalanceService(dbContext, leaveOptions);
+        var service = new LeaveBalanceService(dbContext, leaveOptions, new TestAppCache());
 
         var days = service.CalculateWorkingDays(new DateOnly(2026, 1, 23), new DateOnly(2026, 1, 27));
 

@@ -1,0 +1,15 @@
+flowchart TD
+    User[Browser User] --> FE[React Frontend]
+    FE --> GW[API Gateway / Entry]
+    GW --> API[LeaveManagement.API]
+    API --> APP[Application Layer]
+    APP --> INF[Infrastructure Layer]
+    INF --> DB[(MySQL)]
+    INF --> CACHE[(Redis)]
+    INF --> NOTIF[Notification Service]
+
+    subgraph Backend
+      API
+      APP
+      INF
+    end

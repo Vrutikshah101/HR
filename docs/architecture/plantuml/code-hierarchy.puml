@@ -1,0 +1,19 @@
+@startuml
+!theme plain
+
+package "Solution" {
+  [LeaveManagement.API] as API
+  [LeaveManagement.Application] as APP
+  [LeaveManagement.Domain] as DOMAIN
+  [LeaveManagement.Infrastructure] as INF
+  [LeaveManagement.Tests] as TESTS
+}
+
+API --> APP
+API --> INF
+INF --> APP
+INF --> DOMAIN
+APP --> DOMAIN
+TESTS --> API
+TESTS --> INF
+@enduml

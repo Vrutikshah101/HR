@@ -12,10 +12,17 @@ namespace LeaveManagement.API.Controllers;
 public class ReportsController : ControllerBase
 {
     private readonly IReportService _reportService;
+    private readonly IAnalyticsEmbedService _analyticsEmbedService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public ReportsController(IReportService reportService)
+    public ReportsController(
+        IReportService reportService,
+        IAnalyticsEmbedService analyticsEmbedService,
+        ICurrentUserService currentUserService)
     {
         _reportService = reportService;
+        _analyticsEmbedService = analyticsEmbedService;
+        _currentUserService = currentUserService;
     }
 
     [HttpGet("leave-balance")]
@@ -59,6 +66,19 @@ public class ReportsController : ControllerBase
     {
         var rows = await _reportService.GetApprovalSummaryAsync(new ReportFilters(null, null, dateFrom, dateTo, null, format), cancellationToken);
         return Render(rows, format, "approval-summary");
+    }
+
+    [HttpGet("analytics/embed-url")]
+    public async Task<IActionResult> AnalyticsEmbedUrl(
+        [FromQuery] int? dashboardId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _analyticsEmbedService.BuildDashboardEmbedUrlAsync(
+            _currentUserService.Roles,
+            dashboardId,
+            cancellationToken);
+
+        return Ok(new AnalyticsEmbedResponse(result.EmbedUrl, result.DashboardId, result.ExpiresAtUtcUnix));
     }
 
     private IActionResult Render(IReadOnlyCollection<ReportRowDto> rows, string? format, string filePrefix)

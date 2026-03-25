@@ -9,6 +9,7 @@ import { EmployeeDashboardPage } from "../features/dashboard/pages/EmployeeDashb
 import { HrDashboardPage } from "../features/dashboard/pages/HrDashboardPage";
 import { AdminDashboardPage } from "../features/dashboard/pages/AdminDashboardPage";
 import { LeaveBalanceReportPage } from "../features/reports/pages/LeaveBalanceReportPage";
+import { AnalyticsDashboardPage } from "../features/reports/pages/AnalyticsDashboardPage";
 import { DepartmentsMasterPage } from "../features/masters/pages/DepartmentsMasterPage";
 import { DesignationsMasterPage } from "../features/masters/pages/DesignationsMasterPage";
 import { DepartmentDesignationMapPage } from "../features/masters/pages/DepartmentDesignationMapPage";
@@ -164,6 +165,14 @@ export function AppRoutes() {
           element={
             <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
               <LeaveBalanceReportPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="reports/analytics"
+          element={
+            <RoleRoute roles={roles} allow={["Hr", "Admin"]}>
+              <AnalyticsDashboardPage />
             </RoleRoute>
           }
         />

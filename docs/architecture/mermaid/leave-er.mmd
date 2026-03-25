@@ -1,0 +1,114 @@
+erDiagram
+    USERS {
+        string id PK
+        string email UK
+        string password_hash
+        boolean is_active
+        datetime created_at_utc
+    }
+
+    USER_ROLES {
+        string user_id PK,FK
+        string role_code PK
+    }
+
+    EMPLOYEES {
+        string id PK
+        string user_id UK,FK
+        string employee_code UK
+        string full_name
+        string department
+        string designation
+        string gender
+        date date_of_birth
+        date join_date
+        date date_of_relieving
+    }
+
+    REPORTING_HIERARCHIES {
+        string id PK
+        string employee_id UK,FK
+        string level1_approver_employee_id FK
+        string level2_approver_employee_id FK
+    }
+
+    LEAVE_TYPES {
+        string id PK
+        string leave_code UK
+        string leave_name
+        boolean is_active
+    }
+
+    LEAVE_REQUESTS {
+        string id PK
+        string employee_id FK
+        string leave_type_code
+        date start_date
+        date end_date
+        decimal days
+        string reason
+        string status
+        datetime created_at_utc
+    }
+
+    LEAVE_REQUEST_APPROVALS {
+        string id PK
+        string leave_request_id FK
+        int approval_level
+        string approver_employee_id FK
+        string action
+        string comment
+        datetime actioned_at_utc
+    }
+
+    LEAVE_BALANCES {
+        string id PK
+        string employee_id FK
+        string leave_type_code
+        decimal opening_balance
+        decimal used
+        decimal adjustments
+    }
+
+    HOLIDAYS {
+        string id PK
+        date holiday_date
+        string holiday_name
+        string location
+        boolean is_optional
+    }
+
+    DEPARTMENTS {
+        string id PK
+        string department_code UK
+        string department_name
+        boolean is_active
+    }
+
+    DESIGNATIONS {
+        string id PK
+        string designation_code UK
+        string designation_name
+        boolean is_active
+    }
+
+    DEPARTMENT_DESIGNATION_MAPS {
+        string id PK
+        string department_id
+        string designation_id
+        datetime created_at_utc
+    }
+
+    USERS ||--o{ USER_ROLES : has
+    USERS ||--|| EMPLOYEES : profile
+
+    EMPLOYEES ||--o| REPORTING_HIERARCHIES : subject
+    EMPLOYEES ||--o{ LEAVE_REQUESTS : submits
+    EMPLOYEES ||--o{ LEAVE_BALANCES : owns
+    EMPLOYEES ||--o{ LEAVE_REQUEST_APPROVALS : actions
+
+    LEAVE_REQUESTS ||--o{ LEAVE_REQUEST_APPROVALS : audited_by
+
+    %% Logical mapping relation (current code uses IDs + unique index on map)
+    DEPARTMENTS ||--o{ DEPARTMENT_DESIGNATION_MAPS : mapped
+    DESIGNATIONS ||--o{ DEPARTMENT_DESIGNATION_MAPS : mapped

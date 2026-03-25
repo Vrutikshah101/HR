@@ -1,154 +1,140 @@
 # agents_vrutik.md
 
-## Project
-Leave Management System (HR / Leave Workflow)
+## Leave Management System - Implementation Log
 
-## Tech Stack
-- Backend: ASP.NET Core Web API
-- Frontend: React (Vite)
-- Database: MySQL
+## 1. Project Snapshot
+- **Project**: Leave Management System
+- **Backend**: ASP.NET Core Web API (.NET 8)
+- **Frontend**: React + Vite
+- **Database**: MySQL
+- **Primary Roles**: Admin, HR, Employee (User)
+- **Approval Rule**: 1-level and 2-level hierarchy supported
 
-## Working Principles Followed
-- Phase-driven implementation
-- Schema-first and contract-aligned development
-- No hidden logic in UI/controllers
-- Documentation + implementation sync
-- Test-first validation on critical flows
+## 2. Execution Principles Followed
+- Phase-driven delivery
+- Schema-first backend implementation
+- API-contract-first integration
+- Traceability from requirement to DB/API/UI/Test
+- No hidden business logic in controllers/UI
+- Assumption logging when requirements were unclear
 
-## Completed Scope Summary
+## 3. Phase Completion Summary
 
 ### Phase -1: Planning and Documentation
-Completed and maintained mandatory docs under `docs/`:
-- requirements.md
-- domain-model.md
-- schema.sql
-- api-contract.md
-- workflow.md
-- access-matrix.md
-- assumptions.md
-- decision-log.md
-- test-plan.md
-- phase-plan.md
+Completed mandatory documents in `docs/`:
+- `requirements.md`
+- `domain-model.md`
+- `schema.sql`
+- `api-contract.md`
+- `workflow.md`
+- `access-matrix.md`
+- `assumptions.md`
+- `decision-log.md`
+- `test-plan.md`
+- `phase-plan.md`
 
-### Phase 0: Environment and Docker
-- Added container setup for MySQL, backend, frontend.
-- Added Dockerfiles and compose wiring.
-- Added env variable support for connection string/API base URL.
-- Also supported local non-Docker run path due machine constraints.
+### Phase 0: Environment Setup
+- Docker compose and container setup prepared (backend/frontend/mysql).
+- Local non-docker workflow supported due machine constraints.
+- Environment wiring completed for DB and frontend API base URL.
 
-### Phase 1: Frontend Foundation (then upgraded to live API UX)
-Initial:
-- Layout shell, role-based routes, static dashboards/forms.
+### Phase 1: UI/UX Foundation
+- Role-based shell and route scaffolding.
+- Login screen and dashboard screens created.
+- Reusable UI blocks added (tables/cards/navigation).
+- Progressive redesign done for contemporary look-and-feel.
 
-Upgraded:
-- Real login via `/api/auth/login`.
-- JWT parsing + role-based redirects.
-- Protected routes and logout flow.
-- API client bearer token interceptor.
-- Unauthorized/session-expiry redirect handling.
-
-### Phase 2: DB + Backend Foundation
+### Phase 2: Database + Backend Foundation
 - EF Core + Pomelo MySQL configured.
-- `ApplicationDbContext` and entity mappings implemented.
-- Initial migration created and applied.
-- DI and infrastructure registration finalized.
+- `ApplicationDbContext` and entity configurations completed.
+- Migrations and snapshot maintained.
+- Infrastructure DI registration completed.
 
-### Phase 3: Auth + Users + Hierarchy
-- JWT token service and auth pipeline implemented.
-- Password hashing (PBKDF2) implemented.
-- Users APIs implemented (`POST /api/users`, `GET /api/users`).
-- Hierarchy APIs implemented (`PUT /api/hierarchy`, `GET /api/hierarchy/{employeeId}`).
-- Dev seeding added (admin/hr/manager/employee).
+### Phase 3: Authentication + Users + Hierarchy
+- JWT authentication and authorization pipeline enabled.
+- Password hashing implemented.
+- User management APIs implemented.
+- Hierarchy APIs implemented.
+- Development seed users introduced.
 
 ### Phase 4: Leave Apply
-- Leave apply validations and workflow entry implemented.
-- Leave type/date/reason/days/overlap/balance validations.
-- My leave history retrieval implemented.
+- Leave request create + validation rules implemented.
+- History retrieval and core request constraints implemented.
 
 ### Phase 5: Approval Workflow
-- Level 1 / Level 2 approval transitions implemented.
-- Reject flow with mandatory comment validation.
-- Audit trail persisted in approvals table.
-- Approve/reject APIs wired and validated.
+- Level 1 / Level 2 approval logic implemented.
+- Reject flow with comment validation implemented.
+- Approval audit actions persisted.
 
 ### Phase 6: Leave Balance + Holidays
-- Working-day logic excluding weekends/holidays.
-- Balance check at apply time.
-- Deduction on final approval.
-- Restoration on approved cancellation.
-- APIs: holidays + my balances.
+- Working-day calculation with weekend/holiday checks.
+- Balance deduction and restoration logic integrated.
+- Holiday and balance APIs added.
 
 ### Phase 7: Dashboards
-- Role-based KPI service implemented (Employee/Manager/HR/Admin).
-- Dashboard endpoints converted to DB-driven metrics.
+- DB-driven KPI services and role-wise dashboards implemented.
 
 ### Phase 8: MIS Reports
-- Reports service implemented with filters.
-- CSV export mode added via `format=csv`.
-- Endpoints for leave-balance, department-summary, monthly-utilization, approval-summary.
+- Filtered report endpoints implemented.
+- CSV export support added.
 
 ### Phase 9: Notifications + Hardening
-- Notification abstraction added with logging channel baseline.
-- Global exception middleware.
-- Security headers.
-- Rate limiting (global + auth policy).
-- Password policy tightening.
+- Notification abstraction added.
+- Global exception middleware implemented.
+- Rate limiting and security headers added.
 
-### Phase 10: QA & Release Readiness
+### Phase 10: QA Readiness
 - Backend test project added.
-- Tests for hashing, leave balance logic, workflow validation.
-- Build + tests executed successfully.
+- Core workflow and logic tests added and validated.
 
-## Post-Phase Enhancements Completed
+## 4. Major Enhancements Delivered
 
-### UX/UI Modernization
-- Login page redesigned (multiple iterations).
-- Inner workspace redesign with improved shell, cards, tables, visual hierarchy.
-- Responsive behavior improvements.
+### Backend Enhancements
+- Master data domain introduced:
+  - Departments
+  - Designations
+  - Department-Designation mapping
+  - Leave types
+  - Holidays
+- Master APIs added through dedicated controller and service layers.
+- User model extended with profile attributes (gender, DOB, DOJ, relieving date).
+- Seeder improved for robust startup on partially synced DB environments.
 
-### Navigation and Layout
-- Breadcrumbs implemented.
-- Top-right user identity area with avatar and sign-out.
-- Footer added to inner workspace.
-- Smart sidebar behavior (auto-hide/pin/mobile toggle).
+### Frontend Enhancements
+- Navigation refactored into grouped parent-child menu structure.
+- Pages added for:
+  - User Registration
+  - Hierarchy Setup
+  - Activity Tracker
+  - Master management screens
+- Breadcrumbs and improved app shell included.
+- Reusable data grids updated for search/sort/filter behavior.
+- Toast-based feedback for user actions implemented.
 
-### Data Grids
-- Reusable searchable/sortable/filterable grid component introduced.
-- Applied in leaves, approvals, and reports screens.
+### Runtime Stability Fixes
+- Addressed startup failure where migration history existed but table was missing.
+- Added schema compatibility guard in seeder for:
+  - `department_designation_maps` creation if missing
+  - Employee profile columns auto-check/add on startup
+- Replaced MySQL-version-sensitive syntax with information-schema checks.
 
-### Profile Module
-- Backend profile APIs added:
-  - `GET /api/users/me`
-  - `PUT /api/users/me`
-- Frontend profile page added for view/edit.
+## 5. Current Status
+- Backend + frontend integrated for core leave lifecycle and organization setup flows.
+- Master data and hierarchy workflow foundation is in place.
+- Schema compatibility and startup robustness improved.
+- Ready for next cycle of UX refinement and full UAT pass.
 
-### Identity Display Changes
-- UI shifted from raw IDs to user-facing info where available.
-- Approval list now uses employee name/email in UI context.
+## 6. Important Operational Notes
+- For PowerShell execution-policy environments, use `npm.cmd` instead of `npm`.
+- If API DLL lock occurs during build, stop running API process and rebuild.
+- Keep `cred.txt` local-only (do not commit credentials to git).
 
-### Activity Tracking
-- Client-side activity tracking added:
-  - page visits
-  - login/logout
-  - leave apply/cancel
-  - approval actions
-  - report filter/export
-  - profile update
-- Activity display added to Profile page (Recent Activity).
-- Reliability update: event-based refresh + storage fallback.
+## 7. Last Consolidated Git Commit
+- **Commit**: `7991634`
+- **Summary**: Master setup, hierarchy UI flow, and schema compatibility fixes.
 
-### Icons and Branding
-- App icon set introduced for navigation/actions.
-- Favicon and apple-touch-icon added:
-  - `frontend/public/favicon.svg`
-  - `frontend/public/apple-touch-icon.svg`
-- `index.html` updated with icon metadata.
-
-## Current Runtime Notes
-- For PowerShell policy restrictions, `npm.cmd` is used instead of `npm`.
-- If backend is already running, some dotnet full-solution builds may lock binaries; alternate output build path can be used.
-
-## Current Status
-- Functional backend/API completed across planned phases.
-- Frontend is integrated with live APIs for core flows.
-- UI/UX substantially upgraded, with ongoing iterative polish based on feedback.
+## 8. Next Recommended Steps
+1. Run full UAT checklist for registration, hierarchy, leave apply, and approvals.
+2. Close remaining UI polish feedback (menu behavior, spacing, typography consistency).
+3. Expand integration tests for master mappings and registration workflow.
+4. Finalize release notes and deployment runbook.

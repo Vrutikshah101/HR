@@ -2,6 +2,7 @@ using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Application.Leaves;
 using LeaveManagement.Domain.Entities;
 using LeaveManagement.Domain.Enums;
+using LeaveManagement.Infrastructure.Caching;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,17 +14,20 @@ public class LeaveWorkflowService : ILeaveWorkflowService
     private readonly ApplicationDbContext _dbContext;
     private readonly ILeaveBalanceService _leaveBalanceService;
     private readonly INotificationService _notificationService;
+    private readonly IAppCache _appCache;
     private readonly ILogger<LeaveWorkflowService> _logger;
 
     public LeaveWorkflowService(
         ApplicationDbContext dbContext,
         ILeaveBalanceService leaveBalanceService,
         INotificationService notificationService,
+        IAppCache appCache,
         ILogger<LeaveWorkflowService> logger)
     {
         _dbContext = dbContext;
         _leaveBalanceService = leaveBalanceService;
         _notificationService = notificationService;
+        _appCache = appCache;
         _logger = logger;
     }
 
@@ -144,7 +148,36 @@ public class LeaveWorkflowService : ILeaveWorkflowService
             request.Status);
 
         await _notificationService.NotifyLeaveActionedAsync(request.Id, request.EmployeeId, action, approvalLevel, cancellationToken);
+        await InvalidateWorkflowCachesAsync(request.EmployeeId, approverEmployeeId, hierarchy.Level1ApproverEmployeeId, hierarchy.Level2ApproverEmployeeId, cancellationToken);
 
         return request;
+    }
+
+    private async Task InvalidateWorkflowCachesAsync(
+        Guid requestEmployeeId,
+        Guid actorApproverEmployeeId,
+        Guid? level1ApproverEmployeeId,
+        Guid? level2ApproverEmployeeId,
+        CancellationToken cancellationToken)
+    {
+        await _appCache.RemoveAsync(CacheKeys.LeaveBalances(requestEmployeeId), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.EmployeeDashboard(requestEmployeeId), cancellationToken);
+
+        var managerIds = new[]
+        {
+            actorApproverEmployeeId,
+            level1ApproverEmployeeId ?? Guid.Empty,
+            level2ApproverEmployeeId ?? Guid.Empty
+        }
+        .Where(x => x != Guid.Empty)
+        .Distinct();
+
+        foreach (var managerId in managerIds)
+        {
+            await _appCache.RemoveAsync(CacheKeys.ManagerDashboard(managerId), cancellationToken);
+        }
+
+        await _appCache.RemoveAsync(CacheKeys.HrDashboard(), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.AdminDashboard(), cancellationToken);
     }
 }

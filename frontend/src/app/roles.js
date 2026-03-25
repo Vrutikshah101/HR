@@ -52,7 +52,8 @@ export function getMenuItems(roles) {
     });
 
     const reportChildren = [
-      { label: "Leave Balance Report", to: "/reports/leave-balance", icon: "reports" }
+      { label: "Leave Balance Report", to: "/reports/leave-balance", icon: "reports" },
+      { label: "Analytics Dashboard", to: "/reports/analytics", icon: "dashboard" }
     ];
 
     if (isAdmin) {

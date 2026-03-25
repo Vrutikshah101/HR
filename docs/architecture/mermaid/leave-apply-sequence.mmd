@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant API as LeaveManagement.API
+    participant SVC as LeaveRequestService
+    participant BAL as LeaveBalanceService
+    participant DB as MySQL
+    participant C as Redis
+
+    U->>FE: Submit Leave Request
+    FE->>API: POST /api/leaves
+    API->>SVC: ApplyAsync(...)
+    SVC->>BAL: ValidateSufficientBalanceAsync(...)
+    BAL->>DB: Read leave balance
+    SVC->>DB: Save leave request
+    SVC->>C: Invalidate dashboard/balance cache keys
+    API-->>FE: 200 OK

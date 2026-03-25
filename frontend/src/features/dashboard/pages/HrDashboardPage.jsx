@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PageTitle } from "../../../components/PageTitle";
 import { StatGrid } from "../../../components/StatGrid";
+import { DashboardCharts } from "../../../components/charts/DashboardCharts";
 import { apiClient } from "../../../services/apiClient";
 
 export function HrDashboardPage() {
@@ -26,6 +27,7 @@ export function HrDashboardPage() {
     <section className="page-card">
       <PageTitle title="HR Dashboard" subtitle="Live HR KPIs from backend." />
       <StatGrid items={cards} />
+      <DashboardCharts cards={cards} />
     </section>
   );
 }

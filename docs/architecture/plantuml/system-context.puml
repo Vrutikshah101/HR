@@ -1,0 +1,21 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+
+actor "Browser User" as User
+component "React Frontend" as FE
+component "API Gateway" as GW
+component "LeaveManagement.API" as API
+component "Application Layer" as APP
+component "Infrastructure Layer" as INF
+database "MySQL" as DB
+queue "Redis" as CACHE
+
+User --> FE
+FE --> GW
+GW --> API
+API --> APP
+APP --> INF
+INF --> DB
+INF --> CACHE
+@enduml

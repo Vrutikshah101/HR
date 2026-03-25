@@ -16,9 +16,10 @@ public class LeaveWorkflowServiceTests
             .Options;
 
         await using var dbContext = new ApplicationDbContext(options);
-        var balanceService = new LeaveBalanceService(dbContext, Options.Create(new LeaveOptions()));
+        var appCache = new TestAppCache();
+        var balanceService = new LeaveBalanceService(dbContext, Options.Create(new LeaveOptions()), appCache);
         var notificationService = new LoggingNotificationService(new NullLogger<LoggingNotificationService>());
-        var workflow = new LeaveWorkflowService(dbContext, balanceService, notificationService, new NullLogger<LeaveWorkflowService>());
+        var workflow = new LeaveWorkflowService(dbContext, balanceService, notificationService, appCache, new NullLogger<LeaveWorkflowService>());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.RejectAsync(Guid.NewGuid(), Guid.NewGuid(), "", CancellationToken.None));
     }

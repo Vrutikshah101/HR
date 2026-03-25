@@ -2,6 +2,7 @@ using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Application.Users;
 using LeaveManagement.Domain.Entities;
 using LeaveManagement.Domain.Enums;
+using LeaveManagement.Infrastructure.Caching;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +12,13 @@ public class UserManagementService : IUserManagementService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IAppCache _appCache;
 
-    public UserManagementService(ApplicationDbContext dbContext, IPasswordHasher passwordHasher)
+    public UserManagementService(ApplicationDbContext dbContext, IPasswordHasher passwordHasher, IAppCache appCache)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
+        _appCache = appCache;
     }
 
     public async Task<CreateUserResult> CreateUserAsync(CreateUserCommand command, CancellationToken cancellationToken)
@@ -93,6 +96,8 @@ public class UserManagementService : IUserManagementService
         await _dbContext.Employees.AddAsync(employee, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await _appCache.RemoveAsync(CacheKeys.UserProfile(user.Id), cancellationToken);
+
         return new CreateUserResult(user.Id, employee.Id);
     }
 
@@ -127,6 +132,13 @@ public class UserManagementService : IUserManagementService
 
     public async Task<UserProfile?> GetMyProfileAsync(Guid userId, CancellationToken cancellationToken)
     {
+        var cacheKey = CacheKeys.UserProfile(userId);
+        var cached = await _appCache.GetAsync<UserProfile>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
         var row = await _dbContext.Users
             .Include(x => x.RoleAssignments)
             .Join(
@@ -141,7 +153,7 @@ public class UserManagementService : IUserManagementService
             return null;
         }
 
-        return new UserProfile(
+        var profile = new UserProfile(
             row.user.Id,
             row.employee.Id,
             row.user.Email,
@@ -155,6 +167,9 @@ public class UserManagementService : IUserManagementService
             row.employee.DateOfRelieving,
             row.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
             row.user.IsActive);
+
+        await _appCache.SetAsync(cacheKey, profile, CacheTtls.UserProfile, cancellationToken);
+        return profile;
     }
 
     public async Task<UserProfile> UpdateMyProfileAsync(Guid userId, UpdateUserProfileCommand command, CancellationToken cancellationToken)
@@ -186,7 +201,7 @@ public class UserManagementService : IUserManagementService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new UserProfile(
+        var profile = new UserProfile(
             row.user.Id,
             row.employee.Id,
             row.user.Email,
@@ -200,6 +215,10 @@ public class UserManagementService : IUserManagementService
             row.employee.DateOfRelieving,
             row.user.RoleAssignments.Select(r => r.RoleCode.ToString()).OrderBy(r => r).ToArray(),
             row.user.IsActive);
+
+        await _appCache.RemoveAsync(CacheKeys.UserProfile(userId), cancellationToken);
+
+        return profile;
     }
 
     private static bool IsStrongPassword(string password)

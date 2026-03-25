@@ -1,6 +1,7 @@
 using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Application.Balances;
 using LeaveManagement.Domain.Entities;
+using LeaveManagement.Infrastructure.Caching;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -11,11 +12,13 @@ public class LeaveBalanceService : ILeaveBalanceService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly LeaveOptions _leaveOptions;
+    private readonly IAppCache _appCache;
 
-    public LeaveBalanceService(ApplicationDbContext dbContext, IOptions<LeaveOptions> leaveOptions)
+    public LeaveBalanceService(ApplicationDbContext dbContext, IOptions<LeaveOptions> leaveOptions, IAppCache appCache)
     {
         _dbContext = dbContext;
         _leaveOptions = leaveOptions.Value;
+        _appCache = appCache;
     }
 
     public decimal CalculateWorkingDays(DateOnly startDate, DateOnly endDate)
@@ -62,6 +65,9 @@ public class LeaveBalanceService : ILeaveBalanceService
         var balance = await GetOrCreateBalanceAsync(request.EmployeeId, request.LeaveTypeCode, cancellationToken);
         balance.Used += request.Days;
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _appCache.RemoveAsync(CacheKeys.LeaveBalances(request.EmployeeId), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.EmployeeDashboard(request.EmployeeId), cancellationToken);
     }
 
     public async Task RestoreForCancellationAsync(LeaveRequest request, CancellationToken cancellationToken)
@@ -75,6 +81,9 @@ public class LeaveBalanceService : ILeaveBalanceService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _appCache.RemoveAsync(CacheKeys.LeaveBalances(request.EmployeeId), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.EmployeeDashboard(request.EmployeeId), cancellationToken);
     }
 
     public async Task<IReadOnlyCollection<LeaveBalanceSummaryDto>> GetMyBalancesAsync(Guid userId, CancellationToken cancellationToken)
@@ -89,6 +98,13 @@ public class LeaveBalanceService : ILeaveBalanceService
             throw new InvalidOperationException("Employee profile not found for current user.");
         }
 
+        var cacheKey = CacheKeys.LeaveBalances(employeeId);
+        var cached = await _appCache.GetAsync<LeaveBalanceSummaryDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
         var list = await _dbContext.LeaveBalances
             .AsNoTracking()
             .Where(x => x.EmployeeId == employeeId)
@@ -96,12 +112,25 @@ public class LeaveBalanceService : ILeaveBalanceService
             .Select(x => new LeaveBalanceSummaryDto(x.LeaveTypeCode, x.OpeningBalance, x.Used, x.Adjustments, x.OpeningBalance + x.Adjustments - x.Used))
             .ToArrayAsync(cancellationToken);
 
+        await _appCache.SetAsync(cacheKey, list, CacheTtls.LeaveBalance, cancellationToken);
+
         return list;
     }
 
-    public Task<IReadOnlyCollection<DateOnly>> GetHolidaysAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<DateOnly>> GetHolidaysAsync(CancellationToken cancellationToken)
     {
-        return GetHolidaysInternalAsync(cancellationToken);
+        var cacheKey = CacheKeys.MastersHolidays();
+        var cached = await _appCache.GetAsync<DateOnly[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var holidays = await GetHolidaysInternalAsync(cancellationToken);
+        var array = holidays.ToArray();
+        await _appCache.SetAsync(cacheKey, array, CacheTtls.Masters, cancellationToken);
+
+        return array;
     }
 
     private async Task<IReadOnlyCollection<DateOnly>> GetHolidaysInternalAsync(CancellationToken cancellationToken)
@@ -156,6 +185,8 @@ public class LeaveBalanceService : ILeaveBalanceService
 
         await _dbContext.LeaveBalances.AddAsync(balance, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _appCache.RemoveAsync(CacheKeys.LeaveBalances(employeeId), cancellationToken);
 
         return balance;
     }

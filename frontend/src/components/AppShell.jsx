@@ -70,11 +70,10 @@ export function AppShell({ roles, onLogout }) {
             if (item.children?.length) {
               const isParentActive = item.children.some((child) => location.pathname.startsWith(child.to));
               return (
-                <div key={item.label} className={`gov-menu-group${isParentActive ? " active" : ""} ${openGroup === item.label ? "open" : ""}`}>
+                <div key={item.label} className={`gov-menu-group${isParentActive ? " active" : ""} ${openGroup === item.label ? "open" : ""}`} onMouseEnter={() => setOpenGroup(item.label)} onMouseLeave={() => setOpenGroup((x) => (x === item.label ? null : x))}>
                   <button
                     type="button"
-                    className="gov-menu-link gov-menu-parent"
-                    onClick={() => setOpenGroup((x) => (x === item.label ? null : item.label))}
+                    className="gov-menu-link gov-menu-parent" aria-expanded={openGroup === item.label} onClick={() => setOpenGroup((x) => (x === item.label ? null : item.label))}
                   >
                     <Icon width="14" height="14" className="nav-icon" />
                     <span>{item.label}</span>
@@ -139,3 +138,4 @@ export function AppShell({ roles, onLogout }) {
     </div>
   );
 }
+

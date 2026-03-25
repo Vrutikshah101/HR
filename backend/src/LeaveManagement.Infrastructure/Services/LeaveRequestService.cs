@@ -2,6 +2,7 @@ using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Application.Leaves;
 using LeaveManagement.Domain.Entities;
 using LeaveManagement.Domain.Enums;
+using LeaveManagement.Infrastructure.Caching;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ public class LeaveRequestService : ILeaveRequestService
     private readonly LeaveOptions _leaveOptions;
     private readonly ILeaveBalanceService _leaveBalanceService;
     private readonly INotificationService _notificationService;
+    private readonly IAppCache _appCache;
     private readonly ILogger<LeaveRequestService> _logger;
 
     public LeaveRequestService(
@@ -29,12 +31,14 @@ public class LeaveRequestService : ILeaveRequestService
         IOptions<LeaveOptions> leaveOptions,
         ILeaveBalanceService leaveBalanceService,
         INotificationService notificationService,
+        IAppCache appCache,
         ILogger<LeaveRequestService> logger)
     {
         _dbContext = dbContext;
         _leaveOptions = leaveOptions.Value;
         _leaveBalanceService = leaveBalanceService;
         _notificationService = notificationService;
+        _appCache = appCache;
         _logger = logger;
     }
 
@@ -45,6 +49,13 @@ public class LeaveRequestService : ILeaveRequestService
 
     private async Task<IReadOnlyCollection<LeaveTypeDto>> GetLeaveTypesInternalAsync(CancellationToken cancellationToken)
     {
+        var cacheKey = CacheKeys.MastersLeaveTypes();
+        var cached = await _appCache.GetAsync<LeaveTypeDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
         var dbRows = await _dbContext.LeaveTypes
             .AsNoTracking()
             .Where(x => x.IsActive)
@@ -54,15 +65,19 @@ public class LeaveRequestService : ILeaveRequestService
 
         if (dbRows.Length > 0)
         {
+            await _appCache.SetAsync(cacheKey, dbRows, CacheTtls.Masters, cancellationToken);
             return dbRows;
         }
 
-        return _leaveOptions.Types
+        var fallback = _leaveOptions.Types
             .Where(x => !string.IsNullOrWhiteSpace(x.Code) && !string.IsNullOrWhiteSpace(x.Name))
             .Select(x => new LeaveTypeDto(x.Code.Trim().ToUpperInvariant(), x.Name.Trim()))
             .DistinctBy(x => x.Code)
             .OrderBy(x => x.Code)
             .ToArray();
+
+        await _appCache.SetAsync(cacheKey, fallback, CacheTtls.Masters, cancellationToken);
+        return fallback;
     }
 
     public async Task<LeaveRequest> ApplyAsync(Guid userId, ApplyLeaveCommand command, CancellationToken cancellationToken)
@@ -132,6 +147,7 @@ public class LeaveRequestService : ILeaveRequestService
 
         _logger.LogInformation("Leave applied. RequestId={RequestId} EmployeeId={EmployeeId} Days={Days}", request.Id, request.EmployeeId, request.Days);
         await _notificationService.NotifyLeaveAppliedAsync(request.Id, request.EmployeeId, hierarchy.Level1ApproverEmployeeId, hierarchy.Level2ApproverEmployeeId, cancellationToken);
+        await InvalidateWorkflowCachesAsync(request.EmployeeId, hierarchy.Level1ApproverEmployeeId, hierarchy.Level2ApproverEmployeeId, cancellationToken);
 
         return request;
     }
@@ -246,12 +262,17 @@ public class LeaveRequestService : ILeaveRequestService
             throw new InvalidOperationException("Leave request not found.");
         }
 
+        var hierarchy = await _dbContext.ReportingHierarchies
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.EmployeeId == request.EmployeeId, cancellationToken);
+
         if (request.Status is LeaveRequestStatus.PendingLevel1 or LeaveRequestStatus.PendingLevel2)
         {
             request.Status = LeaveRequestStatus.Cancelled;
             await _dbContext.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Leave cancelled at pending stage. RequestId={RequestId}", request.Id);
             await _notificationService.NotifyLeaveCancelledAsync(request.Id, request.EmployeeId, cancellationToken);
+            await InvalidateWorkflowCachesAsync(request.EmployeeId, hierarchy?.Level1ApproverEmployeeId, hierarchy?.Level2ApproverEmployeeId, cancellationToken);
             return request;
         }
 
@@ -262,6 +283,7 @@ public class LeaveRequestService : ILeaveRequestService
             await _leaveBalanceService.RestoreForCancellationAsync(request, cancellationToken);
             _logger.LogInformation("Approved leave cancelled and balance restored. RequestId={RequestId}", request.Id);
             await _notificationService.NotifyLeaveCancelledAsync(request.Id, request.EmployeeId, cancellationToken);
+            await InvalidateWorkflowCachesAsync(request.EmployeeId, hierarchy?.Level1ApproverEmployeeId, hierarchy?.Level2ApproverEmployeeId, cancellationToken);
             return request;
         }
 
@@ -281,6 +303,25 @@ public class LeaveRequestService : ILeaveRequestService
         }
 
         return employeeId;
+    }
+
+    private async Task InvalidateWorkflowCachesAsync(Guid employeeId, Guid? level1ApproverId, Guid? level2ApproverId, CancellationToken cancellationToken)
+    {
+        await _appCache.RemoveAsync(CacheKeys.LeaveBalances(employeeId), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.EmployeeDashboard(employeeId), cancellationToken);
+
+        if (level1ApproverId.HasValue)
+        {
+            await _appCache.RemoveAsync(CacheKeys.ManagerDashboard(level1ApproverId.Value), cancellationToken);
+        }
+
+        if (level2ApproverId.HasValue)
+        {
+            await _appCache.RemoveAsync(CacheKeys.ManagerDashboard(level2ApproverId.Value), cancellationToken);
+        }
+
+        await _appCache.RemoveAsync(CacheKeys.HrDashboard(), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.AdminDashboard(), cancellationToken);
     }
 
     private static void ValidateApplyCommand(ApplyLeaveCommand command)

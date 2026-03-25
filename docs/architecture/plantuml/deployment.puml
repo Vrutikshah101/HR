@@ -1,0 +1,27 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+
+node "Client" {
+  component "Browser" as Browser
+}
+
+node "App Tier" {
+  component "Load Balancer" as LB
+  component "API #1" as API1
+  component "API #2" as API2
+}
+
+node "Data Tier" {
+  database "MySQL" as DB
+  component "Redis" as Redis
+}
+
+Browser --> LB
+LB --> API1
+LB --> API2
+API1 --> DB
+API2 --> DB
+API1 --> Redis
+API2 --> Redis
+@enduml

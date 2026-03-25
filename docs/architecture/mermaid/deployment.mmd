@@ -1,0 +1,23 @@
+flowchart LR
+    subgraph Client
+      B[Browser]
+    end
+
+    subgraph AppTier
+      LB[Load Balancer]
+      API1[API Instance 1]
+      API2[API Instance 2]
+    end
+
+    subgraph DataTier
+      MYSQL[(MySQL Primary/Replica)]
+      REDIS[(Redis)]
+    end
+
+    B --> LB
+    LB --> API1
+    LB --> API2
+    API1 --> MYSQL
+    API2 --> MYSQL
+    API1 --> REDIS
+    API2 --> REDIS

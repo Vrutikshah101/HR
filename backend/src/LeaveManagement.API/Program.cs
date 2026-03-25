@@ -4,6 +4,7 @@ using LeaveManagement.API.Middleware;
 using LeaveManagement.API.Services;
 using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Infrastructure.Auth;
+using LeaveManagement.Infrastructure.Caching;
 using LeaveManagement.Infrastructure.DependencyInjection;
 using LeaveManagement.Infrastructure.Persistence;
 using LeaveManagement.Infrastructure.Services;
@@ -20,6 +21,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
+builder.Services.AddHealthChecks().AddCheck<RedisCacheHealthCheck>("cache");
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -107,6 +109,7 @@ app.UseCors("LocalDev");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHealthChecks("/health");
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())

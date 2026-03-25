@@ -3,6 +3,7 @@ import { DataGrid } from "../../../components/DataGrid";
 import { PageTitle } from "../../../components/PageTitle";
 import { trackActivity } from "../../../services/activityTracker";
 import { apiClient } from "../../../services/apiClient";
+import { ReportCharts } from "../../../components/charts/ReportCharts";
 
 export function LeaveBalanceReportPage() {
   const [department, setDepartment] = useState("");
@@ -82,6 +83,8 @@ export function LeaveBalanceReportPage() {
       <div className="action-row">
         <button type="button" onClick={exportCsv}>Export CSV</button>
       </div>
+
+      <ReportCharts rows={rows} />
 
       <DataGrid
         rows={rows}

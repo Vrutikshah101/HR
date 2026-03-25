@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PageTitle } from "../../../components/PageTitle";
 import { StatGrid } from "../../../components/StatGrid";
+import { DashboardCharts } from "../../../components/charts/DashboardCharts";
 import { apiClient } from "../../../services/apiClient";
 
 export function EmployeeDashboardPage() {
@@ -71,6 +72,8 @@ export function EmployeeDashboardPage() {
             <h3>Pending Task Details</h3>
             <StatGrid items={cards} />
           </article>
+
+          <DashboardCharts cards={cards} />
         </section>
       </section>
     </section>

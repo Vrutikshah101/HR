@@ -1,0 +1,104 @@
+@startuml
+!theme plain
+skinparam shadowing false
+skinparam sequence {
+  ArrowThickness 1
+  LifeLineBorderColor #4b5563
+  LifeLineBackgroundColor #f8fafc
+  ParticipantBorderColor #334155
+  ParticipantBackgroundColor #ffffff
+  ParticipantFontColor #0f172a
+}
+
+actor Employee as E
+actor "L1 Approver" as L1
+actor "L2 Approver" as L2
+participant Frontend as FE
+participant "LeaveManagement.API" as API
+participant "LeaveRequestService" as LRS
+participant "HierarchyService" as HS
+participant "LeaveBalanceService" as LBS
+database MySQL as DB
+collections Redis as RC
+participant "NotificationService" as NS
+
+== Apply Leave ==
+E -> FE : Fill leave form + submit
+FE -> API : POST /api/leaves
+API -> LRS : ApplyAsync(userId, command)
+LRS -> HS : Validate approver hierarchy
+HS -> DB : Read reporting_hierarchy
+HS --> LRS : hierarchy
+
+LRS -> LBS : ValidateSufficientBalanceAsync(...)
+LBS -> DB : Read leave_balances
+LBS --> LRS : balance OK / fail
+
+alt Validation failed
+  LRS --> API : domain validation error
+  API --> FE : 4xx + message
+else Validation passed
+  LRS -> DB : Insert leave_request (Pending L1 or L2)
+  LRS -> RC : Invalidate employee/manager dashboard + balance keys
+  LRS -> NS : Notify approver(s)
+  NS -> DB : Insert notification/audit rows
+  LRS --> API : request created
+  API --> FE : 200 Created
+end
+
+== Approval Workflow ==
+L1 -> FE : Approve / Reject
+FE -> API : POST /api/leaves/{id}/approve or reject
+API -> LRS : GetById + authorization guard
+API -> DB : Read request + approver mapping
+
+alt L1 Approves and L2 exists
+  API -> DB : Update status = PendingLevel2
+  API -> RC : Invalidate manager/HR/admin dashboard keys
+  API -> NS : Notify L2
+else L1 Rejects
+  API -> DB : Update status = Rejected + audit action
+  API -> RC : Invalidate employee/manager/HR/admin keys
+  API -> NS : Notify employee
+else L1 Approves final (no L2)
+  API -> DB : Update status = Approved + audit action
+  API -> LBS : ApplyApprovedDeductionAsync
+  LBS -> DB : Update leave_balances.used
+  API -> RC : Invalidate employee/manager/HR/admin + balance keys
+  API -> NS : Notify employee
+end
+
+== L2 Action ==
+L2 -> FE : Approve / Reject
+FE -> API : POST /api/leaves/{id}/approve or reject
+
+alt L2 Approves
+  API -> DB : Update status = Approved + audit action
+  API -> LBS : ApplyApprovedDeductionAsync
+  LBS -> DB : Update leave_balances.used
+  API -> RC : Invalidate employee/manager/HR/admin + balance keys
+  API -> NS : Notify employee
+else L2 Rejects
+  API -> DB : Update status = Rejected + audit action
+  API -> RC : Invalidate employee/manager/HR/admin keys
+  API -> NS : Notify employee
+end
+
+== Cancel Flow ==
+E -> FE : Cancel leave request
+FE -> API : POST /api/leaves/{id}/cancel
+API -> DB : Validate ownership + current status
+
+alt Pending request
+  API -> DB : Update status = Cancelled
+  API -> RC : Invalidate dashboards + balance keys
+  API -> NS : Notify approver(s)
+else Approved request
+  API -> DB : Update status = Cancelled
+  API -> LBS : RestoreForCancellationAsync
+  LBS -> DB : Revert leave_balances.used
+  API -> RC : Invalidate dashboards + balance keys
+  API -> NS : Notify approver(s)
+end
+
+@enduml

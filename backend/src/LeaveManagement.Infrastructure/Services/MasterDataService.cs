@@ -1,6 +1,7 @@
 using LeaveManagement.Application.Abstractions;
 using LeaveManagement.Application.Masters;
 using LeaveManagement.Domain.Entities;
+using LeaveManagement.Infrastructure.Caching;
 using LeaveManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,31 +10,60 @@ namespace LeaveManagement.Infrastructure.Services;
 public class MasterDataService : IMasterDataService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IAppCache _appCache;
 
-    public MasterDataService(ApplicationDbContext dbContext)
+    public MasterDataService(ApplicationDbContext dbContext, IAppCache appCache)
     {
         _dbContext = dbContext;
+        _appCache = appCache;
     }
 
     public async Task<IReadOnlyCollection<DepartmentDto>> GetDepartmentsAsync(CancellationToken cancellationToken)
     {
-        return await _dbContext.Departments.AsNoTracking()
+        var cacheKey = CacheKeys.MastersDepartments();
+        var cached = await _appCache.GetAsync<DepartmentDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var rows = await _dbContext.Departments.AsNoTracking()
             .OrderBy(x => x.Name)
             .Select(x => new DepartmentDto(x.Id, x.Code, x.Name, x.IsActive))
             .ToArrayAsync(cancellationToken);
+
+        await _appCache.SetAsync(cacheKey, rows, CacheTtls.Masters, cancellationToken);
+        return rows;
     }
 
     public async Task<IReadOnlyCollection<DesignationDto>> GetDesignationsAsync(CancellationToken cancellationToken)
     {
-        return await _dbContext.Designations.AsNoTracking()
+        var cacheKey = CacheKeys.MastersDesignations();
+        var cached = await _appCache.GetAsync<DesignationDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var rows = await _dbContext.Designations.AsNoTracking()
             .OrderBy(x => x.Name)
             .Select(x => new DesignationDto(x.Id, x.Code, x.Name, x.IsActive))
             .ToArrayAsync(cancellationToken);
+
+        await _appCache.SetAsync(cacheKey, rows, CacheTtls.Masters, cancellationToken);
+        return rows;
     }
 
     public async Task<IReadOnlyCollection<DesignationDto>> GetDesignationsByDepartmentAsync(Guid departmentId, CancellationToken cancellationToken)
     {
-        return await _dbContext.DepartmentDesignationMaps.AsNoTracking()
+        var cacheKey = CacheKeys.DesignationsByDepartment(departmentId);
+        var cached = await _appCache.GetAsync<DesignationDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var rows = await _dbContext.DepartmentDesignationMaps.AsNoTracking()
             .Where(x => x.DepartmentId == departmentId)
             .Join(
                 _dbContext.Designations.AsNoTracking(),
@@ -43,11 +73,21 @@ public class MasterDataService : IMasterDataService
             .Distinct()
             .OrderBy(x => x.Name)
             .ToArrayAsync(cancellationToken);
+
+        await _appCache.SetAsync(cacheKey, rows, CacheTtls.Masters, cancellationToken);
+        return rows;
     }
 
     public async Task<IReadOnlyCollection<DepartmentDesignationMapDto>> GetDepartmentDesignationMapsAsync(CancellationToken cancellationToken)
     {
-        return await _dbContext.DepartmentDesignationMaps.AsNoTracking()
+        var cacheKey = CacheKeys.MastersDepartmentDesignationMap();
+        var cached = await _appCache.GetAsync<DepartmentDesignationMapDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var rows = await _dbContext.DepartmentDesignationMaps.AsNoTracking()
             .Join(
                 _dbContext.Departments.AsNoTracking(),
                 map => map.DepartmentId,
@@ -66,22 +106,45 @@ public class MasterDataService : IMasterDataService
             .OrderBy(x => x.DepartmentName)
             .ThenBy(x => x.DesignationName)
             .ToArrayAsync(cancellationToken);
+
+        await _appCache.SetAsync(cacheKey, rows, CacheTtls.Masters, cancellationToken);
+        return rows;
     }
 
     public async Task<IReadOnlyCollection<LeaveTypeMasterDto>> GetLeaveTypesAsync(CancellationToken cancellationToken)
     {
-        return await _dbContext.LeaveTypes.AsNoTracking()
+        var cacheKey = CacheKeys.MastersLeaveTypes();
+        var cached = await _appCache.GetAsync<LeaveTypeMasterDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var rows = await _dbContext.LeaveTypes.AsNoTracking()
             .OrderBy(x => x.Code)
             .Select(x => new LeaveTypeMasterDto(x.Id, x.Code, x.Name, x.RequiresAttachment, x.IsPaid, x.IsHalfDayAllowed, x.IsBackdatedAllowed, x.MaxDaysPerRequest, x.IsActive))
             .ToArrayAsync(cancellationToken);
+
+        await _appCache.SetAsync(cacheKey, rows, CacheTtls.Masters, cancellationToken);
+        return rows;
     }
 
     public async Task<IReadOnlyCollection<HolidayDto>> GetHolidaysAsync(CancellationToken cancellationToken)
     {
-        return await _dbContext.Holidays.AsNoTracking()
+        var cacheKey = CacheKeys.MastersHolidays();
+        var cached = await _appCache.GetAsync<HolidayDto[]>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var rows = await _dbContext.Holidays.AsNoTracking()
             .OrderBy(x => x.Date)
             .Select(x => new HolidayDto(x.Id, x.Name, x.Date, x.Location, x.IsOptional))
             .ToArrayAsync(cancellationToken);
+
+        await _appCache.SetAsync(cacheKey, rows, CacheTtls.Masters, cancellationToken);
+        return rows;
     }
 
     public async Task<DepartmentDto> CreateDepartmentAsync(string code, string name, CancellationToken cancellationToken)
@@ -109,6 +172,8 @@ public class MasterDataService : IMasterDataService
 
         await _dbContext.Departments.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await InvalidateMasterCacheAsync(cancellationToken);
 
         return new DepartmentDto(entity.Id, entity.Code, entity.Name, entity.IsActive);
     }
@@ -138,6 +203,8 @@ public class MasterDataService : IMasterDataService
 
         await _dbContext.Designations.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await InvalidateMasterCacheAsync(cancellationToken);
 
         return new DesignationDto(entity.Id, entity.Code, entity.Name, entity.IsActive);
     }
@@ -177,6 +244,9 @@ public class MasterDataService : IMasterDataService
         await _dbContext.DepartmentDesignationMaps.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await _appCache.RemoveAsync(CacheKeys.MastersDepartmentDesignationMap(), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.DesignationsByDepartment(departmentId), cancellationToken);
+
         return new DepartmentDesignationMapDto(entity.Id, department.Id, department.Name, designation.Id, designation.Name);
     }
 
@@ -211,6 +281,8 @@ public class MasterDataService : IMasterDataService
         await _dbContext.LeaveTypes.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await _appCache.RemoveAsync(CacheKeys.MastersLeaveTypes(), cancellationToken);
+
         return new LeaveTypeMasterDto(entity.Id, entity.Code, entity.Name, entity.RequiresAttachment, entity.IsPaid, entity.IsHalfDayAllowed, entity.IsBackdatedAllowed, entity.MaxDaysPerRequest, entity.IsActive);
     }
 
@@ -240,6 +312,16 @@ public class MasterDataService : IMasterDataService
         await _dbContext.Holidays.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await _appCache.RemoveAsync(CacheKeys.MastersHolidays(), cancellationToken);
+
         return new HolidayDto(entity.Id, entity.Name, entity.Date, entity.Location, entity.IsOptional);
+    }
+
+    private async Task InvalidateMasterCacheAsync(CancellationToken cancellationToken)
+    {
+        await _appCache.RemoveAsync(CacheKeys.MastersDepartments(), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.MastersDesignations(), cancellationToken);
+        await _appCache.RemoveAsync(CacheKeys.MastersDepartmentDesignationMap(), cancellationToken);
+        await _appCache.RemoveByPrefixAsync("lms:masters:designations-by-department:", cancellationToken);
     }
 }
